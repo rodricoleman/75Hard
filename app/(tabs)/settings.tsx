@@ -3,10 +3,12 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/store/useAuth';
 import {
+  cancelAllNotifications,
+  getScheduledNotifications,
+  notificationsSupported,
   requestNotificationsPermission,
   scheduleDailyReminder,
 } from '@/lib/notifications';
-import * as Notifications from 'expo-notifications';
 import { colors } from '@/theme/colors';
 
 export default function Settings() {
@@ -15,7 +17,8 @@ export default function Settings() {
   const [hour, setHour] = useState(7);
 
   useEffect(() => {
-    Notifications.getAllScheduledNotificationsAsync().then((arr) => {
+    if (!notificationsSupported) return;
+    getScheduledNotifications().then((arr) => {
       setEnabled(arr.length > 0);
       const trig = arr[0]?.trigger as any;
       if (trig?.hour != null) setHour(trig.hour);
@@ -23,13 +26,16 @@ export default function Settings() {
   }, []);
 
   async function onToggle(v: boolean) {
+    if (!notificationsSupported) {
+      return Alert.alert('Indisponível', 'Notificações só funcionam no app mobile.');
+    }
     if (v) {
       const ok = await requestNotificationsPermission();
       if (!ok) return Alert.alert('Permissão negada');
       await scheduleDailyReminder(hour, 0);
       setEnabled(true);
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await cancelAllNotifications();
       setEnabled(false);
     }
   }
