@@ -5,6 +5,16 @@ import { supabase } from './supabase';
 const PROGRESS_BUCKET = 'h75-progress-photos';
 const SOCIAL_BUCKET = 'h75-social-posts';
 
+type PickedAsset = { uri: string; file?: File | null };
+const assetCache = new Map<string, File>();
+
+function rememberAsset(asset: { uri: string; file?: File | null }): string {
+  if (asset.file && Platform.OS === 'web') {
+    assetCache.set(asset.uri, asset.file);
+  }
+  return asset.uri;
+}
+
 export async function captureProgressPhoto(): Promise<string | null> {
   if (Platform.OS === 'web') {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -12,7 +22,7 @@ export async function captureProgressPhoto(): Promise<string | null> {
       quality: 0.7,
     });
     if (result.canceled) return null;
-    return result.assets[0].uri;
+    return rememberAsset(result.assets[0] as PickedAsset);
   }
   const perm = await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) return null;
@@ -35,22 +45,40 @@ export async function pickImageFromLibrary(): Promise<string | null> {
     aspect: [1, 1],
   });
   if (result.canceled) return null;
+  if (Platform.OS === 'web') return rememberAsset(result.assets[0] as PickedAsset);
   return result.assets[0].uri;
 }
 
-async function uriToBytes(uri: string): Promise<{ bytes: Uint8Array; ext: string }> {
-  const ext = (uri.split('.').pop() || 'jpg').split('?')[0].toLowerCase();
+function extFromMime(mime: string | undefined, fallback: string): string {
+  if (!mime) return fallback;
+  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+  if (mime.includes('png')) return 'png';
+  if (mime.includes('webp')) return 'webp';
+  if (mime.includes('heic')) return 'heic';
+  if (mime.includes('heif')) return 'heif';
+  return fallback;
+}
+
+async function uriToUpload(uri: string): Promise<{ body: Blob | Uint8Array; ext: string; contentType: string }> {
+  const rawExt = (uri.split('.').pop() || 'jpg').split('?')[0].toLowerCase();
   if (Platform.OS === 'web') {
+    const cached = assetCache.get(uri);
+    if (cached) {
+      const ext = extFromMime(cached.type, rawExt);
+      return { body: cached, ext, contentType: cached.type || `image/${ext}` };
+    }
     const res = await fetch(uri);
-    const buf = await res.arrayBuffer();
-    return { bytes: new Uint8Array(buf), ext };
+    if (!res.ok) throw new Error(`Falha ao ler a imagem (${res.status}).`);
+    const blob = await res.blob();
+    const ext = extFromMime(blob.type, rawExt);
+    return { body: blob, ext, contentType: blob.type || `image/${ext}` };
   }
   const FileSystem = require('expo-file-system') as typeof import('expo-file-system');
   const base64 = await FileSystem.readAsStringAsync(uri, {
     encoding: FileSystem.EncodingType.Base64,
   });
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  return { bytes, ext };
+  return { body: bytes, ext: rawExt, contentType: `image/${rawExt}` };
 }
 
 export async function uploadProgressPhoto(
@@ -59,11 +87,11 @@ export async function uploadProgressPhoto(
   challengeId: string,
   day: number,
 ): Promise<string> {
-  const { bytes, ext } = await uriToBytes(localUri);
+  const { body, ext, contentType } = await uriToUpload(localUri);
   const path = `${userId}/${challengeId}/${day}.${ext}`;
   const { error } = await supabase.storage
     .from(PROGRESS_BUCKET)
-    .upload(path, bytes, { contentType: `image/${ext}`, upsert: true });
+    .upload(path, body, { contentType, upsert: true });
   if (error) throw error;
   return path;
 }
@@ -77,11 +105,11 @@ export async function getSignedPhotoUrl(path: string): Promise<string | null> {
 }
 
 export async function uploadSocialPhoto(localUri: string, userId: string): Promise<string> {
-  const { bytes, ext } = await uriToBytes(localUri);
+  const { body, ext, contentType } = await uriToUpload(localUri);
   const path = `${userId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage
     .from(SOCIAL_BUCKET)
-    .upload(path, bytes, { contentType: `image/${ext}`, upsert: false });
+    .upload(path, body, { contentType, upsert: false });
   if (error) throw error;
   const { data } = supabase.storage.from(SOCIAL_BUCKET).getPublicUrl(path);
   return data.publicUrl;
