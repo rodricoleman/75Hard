@@ -92,11 +92,21 @@ export const useChallenge = create<State>((set, get) => ({
   async upsertToday(patch) {
     const { challenge, currentDay, todayEntry } = get();
     if (!challenge) return;
+    const writable = todayEntry
+      ? {
+          workout_indoor: todayEntry.workout_indoor,
+          workout_outdoor: todayEntry.workout_outdoor,
+          diet: todayEntry.diet,
+          water_ml: todayEntry.water_ml,
+          reading_pages: todayEntry.reading_pages,
+          progress_photo_url: todayEntry.progress_photo_url,
+        }
+      : {};
     const payload = {
       challenge_id: challenge.id,
       day_number: currentDay,
       entry_date: todayISO(),
-      ...todayEntry,
+      ...writable,
       ...patch,
     };
     const { data, error } = await supabase
