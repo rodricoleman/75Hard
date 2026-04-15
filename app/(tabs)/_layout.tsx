@@ -6,7 +6,7 @@ function Icon({ label, focused }: { label: string; focused: boolean }) {
   return (
     <Text
       style={{
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '700',
         letterSpacing: 1,
         color: focused ? colors.neon : colors.textDim,
@@ -33,6 +33,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{ tabBarIcon: ({ focused }) => <Icon label="Hoje" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="feed"
+        options={{ tabBarIcon: ({ focused }) => <Icon label="Feed" focused={focused} /> }}
+      />
+      <Tabs.Screen
+        name="ranking"
+        options={{ tabBarIcon: ({ focused }) => <Icon label="Ranking" focused={focused} /> }}
       />
       <Tabs.Screen
         name="stats"
