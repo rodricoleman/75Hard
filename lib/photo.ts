@@ -2,7 +2,8 @@ import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from './supabase';
 
-const BUCKET = 'h75-progress-photos';
+const PROGRESS_BUCKET = 'h75-progress-photos';
+const SOCIAL_BUCKET = 'h75-social-posts';
 
 export async function captureProgressPhoto(): Promise<string | null> {
   if (Platform.OS === 'web') {
@@ -19,6 +20,19 @@ export async function captureProgressPhoto(): Promise<string | null> {
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     quality: 0.7,
     allowsEditing: false,
+  });
+  if (result.canceled) return null;
+  return result.assets[0].uri;
+}
+
+export async function pickImageFromLibrary(): Promise<string | null> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) return null;
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.7,
+    allowsEditing: true,
+    aspect: [1, 1],
   });
   if (result.canceled) return null;
   return result.assets[0].uri;
@@ -48,7 +62,7 @@ export async function uploadProgressPhoto(
   const { bytes, ext } = await uriToBytes(localUri);
   const path = `${userId}/${challengeId}/${day}.${ext}`;
   const { error } = await supabase.storage
-    .from(BUCKET)
+    .from(PROGRESS_BUCKET)
     .upload(path, bytes, { contentType: `image/${ext}`, upsert: true });
   if (error) throw error;
   return path;
@@ -56,8 +70,19 @@ export async function uploadProgressPhoto(
 
 export async function getSignedPhotoUrl(path: string): Promise<string | null> {
   const { data, error } = await supabase.storage
-    .from(BUCKET)
+    .from(PROGRESS_BUCKET)
     .createSignedUrl(path, 60 * 60);
   if (error) return null;
   return data.signedUrl;
+}
+
+export async function uploadSocialPhoto(localUri: string, userId: string): Promise<string> {
+  const { bytes, ext } = await uriToBytes(localUri);
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from(SOCIAL_BUCKET)
+    .upload(path, bytes, { contentType: `image/${ext}`, upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from(SOCIAL_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
