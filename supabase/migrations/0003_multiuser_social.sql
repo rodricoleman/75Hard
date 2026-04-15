@@ -1,15 +1,23 @@
 -- Multi-user + social feed + ranking
--- 1. Reverter single-user: restaurar FKs e RLS por auth.uid()
+-- 1. Reverter single-user: limpar dados órfãos, depois restaurar FKs e RLS por auth.uid()
 -- 2. Novas tabelas: h75_profiles (extend), h75_invites, h75_posts, h75_post_likes, h75_post_comments
--- 3. View h75_leaderboard + RPC redeem_invite
-
--- ---------- 1. Reverter single-user ----------
+-- 3. View h75_leaderboard + RPC redeem_invite + bucket h75-social-posts
 
 drop policy if exists "h75_profiles anon all" on public.h75_profiles;
 drop policy if exists "h75_challenges anon all" on public.h75_challenges;
 drop policy if exists "h75_daily_entries anon all" on public.h75_daily_entries;
 
--- Restaurar FK para auth.users (idempotente)
+-- Limpar dados órfãos ANTES de restaurar FK (IDs fake do modo single-user)
+delete from public.h75_daily_entries
+  where challenge_id in (
+    select id from public.h75_challenges
+    where user_id not in (select id from auth.users)
+  );
+delete from public.h75_challenges
+  where user_id not in (select id from auth.users);
+delete from public.h75_profiles
+  where id not in (select id from auth.users);
+
 do $$
 begin
   if not exists (
@@ -30,25 +38,10 @@ begin
   end if;
 end $$;
 
--- Limpar dados órfãos do modo single-user (IDs fake que não existem em auth.users)
-delete from public.h75_daily_entries
-  where challenge_id in (
-    select id from public.h75_challenges
-    where user_id not in (select id from auth.users)
-  );
-delete from public.h75_challenges
-  where user_id not in (select id from auth.users);
-delete from public.h75_profiles
-  where id not in (select id from auth.users);
-
--- ---------- 2. Estender h75_profiles ----------
-
 alter table public.h75_profiles
   add column if not exists username text unique,
   add column if not exists display_name text,
   add column if not exists avatar_url text;
-
--- ---------- 3. Invites ----------
 
 create table if not exists public.h75_invites (
   code text primary key,
@@ -58,8 +51,6 @@ create table if not exists public.h75_invites (
   created_at timestamptz default now()
 );
 alter table public.h75_invites enable row level security;
-
--- ---------- 4. Posts ----------
 
 create table if not exists public.h75_posts (
   id uuid primary key default gen_random_uuid(),
@@ -89,9 +80,8 @@ create table if not exists public.h75_post_comments (
 create index if not exists h75_post_comments_post_idx on public.h75_post_comments(post_id, created_at);
 alter table public.h75_post_comments enable row level security;
 
--- ---------- 5. RLS ----------
+-- RLS policies
 
--- h75_profiles: leitura para qualquer autenticado, update só do próprio, insert via trigger
 create policy "h75_profiles select authed" on public.h75_profiles
   for select to authenticated using (true);
 create policy "h75_profiles update own" on public.h75_profiles
@@ -99,13 +89,11 @@ create policy "h75_profiles update own" on public.h75_profiles
 create policy "h75_profiles insert self" on public.h75_profiles
   for insert to authenticated with check (auth.uid() = id);
 
--- h75_challenges: só dono
 create policy "h75_challenges select own" on public.h75_challenges
   for select to authenticated using (auth.uid() = user_id);
 create policy "h75_challenges write own" on public.h75_challenges
   for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- h75_daily_entries: só do próprio challenge
 create policy "h75_daily_entries via challenge" on public.h75_daily_entries
   for all to authenticated using (
     exists (select 1 from public.h75_challenges c where c.id = challenge_id and c.user_id = auth.uid())
@@ -113,13 +101,11 @@ create policy "h75_daily_entries via challenge" on public.h75_daily_entries
     exists (select 1 from public.h75_challenges c where c.id = challenge_id and c.user_id = auth.uid())
   );
 
--- h75_invites: ver os próprios, criar como próprio; consumo via RPC security definer
 create policy "h75_invites select own" on public.h75_invites
   for select to authenticated using (created_by = auth.uid());
 create policy "h75_invites insert own" on public.h75_invites
   for insert to authenticated with check (created_by = auth.uid());
 
--- h75_posts: qualquer autenticado lê, dono escreve
 create policy "h75_posts select authed" on public.h75_posts
   for select to authenticated using (true);
 create policy "h75_posts insert own" on public.h75_posts
@@ -127,7 +113,6 @@ create policy "h75_posts insert own" on public.h75_posts
 create policy "h75_posts delete own" on public.h75_posts
   for delete to authenticated using (user_id = auth.uid());
 
--- h75_post_likes: todos leem, dono curte/descurte
 create policy "h75_post_likes select authed" on public.h75_post_likes
   for select to authenticated using (true);
 create policy "h75_post_likes insert own" on public.h75_post_likes
@@ -135,7 +120,6 @@ create policy "h75_post_likes insert own" on public.h75_post_likes
 create policy "h75_post_likes delete own" on public.h75_post_likes
   for delete to authenticated using (user_id = auth.uid());
 
--- h75_post_comments: todos leem, dono cria/deleta
 create policy "h75_post_comments select authed" on public.h75_post_comments
   for select to authenticated using (true);
 create policy "h75_post_comments insert own" on public.h75_post_comments
@@ -143,7 +127,7 @@ create policy "h75_post_comments insert own" on public.h75_post_comments
 create policy "h75_post_comments delete own" on public.h75_post_comments
   for delete to authenticated using (user_id = auth.uid());
 
--- ---------- 6. Trigger de criação de perfil + challenge inicial ----------
+-- Trigger: cria linha em h75_profiles ao criar auth.user
 
 create or replace function public.h75_on_user_created()
 returns trigger language plpgsql security definer as $$
@@ -159,8 +143,7 @@ create trigger h75_on_auth_user_created
   after insert on auth.users
   for each row execute function public.h75_on_user_created();
 
--- ---------- 7. RPC redeem_invite ----------
--- Consome um convite e seta username/display_name no perfil do usuário recém-criado.
+-- RPC: consome convite + seta username/display_name + cria challenge inicial
 
 create or replace function public.h75_redeem_invite(
   p_code text,
@@ -201,7 +184,6 @@ begin
       set username = excluded.username,
           display_name = excluded.display_name;
 
-  -- cria challenge inicial se ainda não houver
   if not exists (select 1 from public.h75_challenges where user_id = v_uid) then
     insert into public.h75_challenges (user_id) values (v_uid);
   end if;
@@ -210,9 +192,7 @@ $$;
 
 grant execute on function public.h75_redeem_invite(text, text, text) to authenticated;
 
--- ---------- 8. View leaderboard ----------
--- current_streak: dias consecutivos completos terminando em hoje (challenge ativo)
--- completed_days: total de dias marcados como completed no challenge ativo
+-- View leaderboard: streak atual + total de dias completos
 
 create or replace view public.h75_leaderboard
 with (security_invoker = on) as
@@ -233,22 +213,25 @@ completed_days as (
   from entries where completed
   group by user_id
 ),
+grouped as (
+  select user_id, day_number,
+    day_number - row_number() over (partition by user_id order by day_number) as grp
+  from entries where completed
+),
+blocks as (
+  select user_id, grp, count(*)::int as block_size, max(day_number) as block_max
+  from grouped
+  group by user_id, grp
+),
+last_completed as (
+  select user_id, max(day_number) as max_day
+  from entries where completed
+  group by user_id
+),
 streaks as (
-  -- Conta dias consecutivos completos a partir do dia atual pra trás
-  select
-    e.user_id,
-    (
-      select coalesce(max(d), 0) from (
-        select day_number, completed,
-          day_number - row_number() over (order by day_number) as grp
-        from entries e2 where e2.user_id = e.user_id
-      ) s
-      where completed
-      group by grp
-      having max(day_number) = (select max(day_number) from entries e3 where e3.user_id = e.user_id and e3.completed)
-    ) as current_streak
-  from entries e
-  group by e.user_id
+  select b.user_id, b.block_size as current_streak
+  from blocks b
+  join last_completed lc on lc.user_id = b.user_id and lc.max_day = b.block_max
 )
 select
   p.id as user_id,
@@ -264,8 +247,7 @@ where p.username is not null;
 
 grant select on public.h75_leaderboard to authenticated;
 
--- ---------- 9. Storage bucket para posts sociais ----------
--- Precisa ser criado via dashboard ou supabase storage API; aqui só setamos policies idempotentes
+-- Storage bucket para posts sociais
 
 insert into storage.buckets (id, name, public)
   values ('h75-social-posts', 'h75-social-posts', true)
