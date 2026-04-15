@@ -10,22 +10,20 @@ import { useAuth } from '@/store/useAuth';
 function AuthGate() {
   const booting = useAuth((s) => s.booting);
   const session = useAuth((s) => s.session);
-  const profile = useAuth((s) => s.profile);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (booting) return;
-    const inAuth = segments[0] === '(auth)';
-    if (!session && !inAuth) {
-      router.replace('/(auth)/login');
-    } else if (session && inAuth) {
-      // Quando loga pela 1ª vez sem perfil ainda, o signup já cria via RPC;
-      // casos extremos (sem username) permanecem no signup.
-      if (profile?.username) router.replace('/(tabs)');
-      else router.replace('/(tabs)');
+    const first = Array.isArray(segments) ? segments[0] : undefined;
+    const inAuth = first === '(auth)';
+    try {
+      if (!session && !inAuth) router.replace('/(auth)/login');
+      else if (session && inAuth) router.replace('/(tabs)');
+    } catch (e) {
+      console.warn('[AuthGate] nav error', e);
     }
-  }, [booting, session, profile, segments, router]);
+  }, [booting, session, segments, router]);
 
   return null;
 }
