@@ -107,7 +107,9 @@ export default function Home() {
           label="Água"
           hint={`${(e as any).water_ml ?? 0} / ${TASK_GOALS.WATER_ML} ml`}
           done={((e as any).water_ml ?? 0) >= TASK_GOALS.WATER_ML}
-          onToggle={() => setWater(TASK_GOALS.WATER_ML)}
+          onToggle={() =>
+            setWater(((e as any).water_ml ?? 0) >= TASK_GOALS.WATER_ML ? 0 : TASK_GOALS.WATER_ML)
+          }
           right={
             <CounterInput
               value={(e as any).water_ml ?? 0}
@@ -122,7 +124,13 @@ export default function Home() {
           label="Leitura"
           hint={`${(e as any).reading_pages ?? 0} / ${TASK_GOALS.READING_PAGES} pág`}
           done={((e as any).reading_pages ?? 0) >= TASK_GOALS.READING_PAGES}
-          onToggle={() => setReading(TASK_GOALS.READING_PAGES)}
+          onToggle={() =>
+            setReading(
+              ((e as any).reading_pages ?? 0) >= TASK_GOALS.READING_PAGES
+                ? 0
+                : TASK_GOALS.READING_PAGES,
+            )
+          }
           right={
             <CounterInput
               value={(e as any).reading_pages ?? 0}
