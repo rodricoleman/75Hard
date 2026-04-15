@@ -92,13 +92,24 @@ export const useAuth = create<State>((set, get) => ({
   },
 
   async signUp({ email, password, inviteCode, username, displayName }) {
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-    // Supabase pode exigir confirmação de email; tentamos login direto
-    const login = await supabase.auth.signInWithPassword({ email, password });
-    if (login.error) throw login.error;
+    const signUpRes = await supabase.auth.signUp({ email, password });
+    if (signUpRes.error) throw signUpRes.error;
+
+    // Se o projeto exige confirmação de email, signUp não retorna sessão.
+    let session = signUpRes.data.session;
+    if (!session) {
+      const login = await supabase.auth.signInWithPassword({ email, password });
+      if (login.error) {
+        throw new Error(
+          'Conta criada, mas o Supabase exige confirmação de email. ' +
+            'Desative "Confirm email" no dashboard do Supabase (Authentication → Providers → Email) e tente de novo.',
+        );
+      }
+      session = login.data.session;
+    }
+
     const { error: rpcErr } = await supabase.rpc('h75_redeem_invite', {
-      p_code: inviteCode.trim(),
+      p_code: inviteCode.trim().toUpperCase(),
       p_username: username.trim().toLowerCase(),
       p_display_name: displayName?.trim() || null,
     });
