@@ -11,16 +11,22 @@ type Props = {
 
 export function TaskRow({ label, hint, done, onToggle, right }: Props) {
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onToggle} style={styles.row}>
-      <View style={[styles.check, done && styles.checkOn]}>
-        {done && <Text style={styles.mark}>✓</Text>}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.label, done && styles.labelDone]}>{label}</Text>
-        {hint && <Text style={styles.hint}>{hint}</Text>}
-      </View>
+    <View style={styles.row}>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onToggle}
+        style={styles.touchArea}
+      >
+        <View style={[styles.check, done && styles.checkOn]}>
+          {done && <Text style={styles.mark}>✓</Text>}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.label, done && styles.labelDone]}>{label}</Text>
+          {hint && <Text style={styles.hint}>{hint}</Text>}
+        </View>
+      </TouchableOpacity>
       {right}
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -35,6 +41,12 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 14,
     marginBottom: 10,
+  },
+  touchArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
   },
   check: {
     width: 26,
