@@ -81,7 +81,13 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: 20, paddingBottom: 40 },
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+  },
   h1: { color: colors.text, fontSize: 28, fontWeight: '900', marginBottom: 20 },
   section: {
     color: colors.textMuted,

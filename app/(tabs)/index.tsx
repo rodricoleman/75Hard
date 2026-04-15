@@ -169,7 +169,13 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: 20, paddingBottom: 40 },
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   dim: { color: colors.textMuted },
   header: { marginBottom: 20 },

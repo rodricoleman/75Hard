@@ -33,13 +33,13 @@ export function CounterInput({ value, step, goal, suffix = '', onChange }: Props
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  btnText: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  btnText: { color: colors.text, fontSize: 22, fontWeight: '700' },
   value: { color: colors.text, fontWeight: '700', minWidth: 64, textAlign: 'center' },
 });

@@ -1,0 +1,21 @@
+{
+  "name": "75Hard",
+  "short_name": "75Hard",
+  "description": "Desafio 75Hard — treinos, dieta, água, leitura e foto diária.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "categories": ["health", "fitness", "lifestyle"],
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
