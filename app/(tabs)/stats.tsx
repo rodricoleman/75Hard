@@ -1,18 +1,16 @@
 import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/store/useAuth';
 import { useChallenge } from '@/store/useChallenge';
 import { TASK_GOALS } from '@/types/challenge';
 import { colors } from '@/theme/colors';
 
 export default function Stats() {
-  const { session } = useAuth();
   const { challenge, entries, currentDay, load } = useChallenge();
 
   useEffect(() => {
-    if (session) load(session.user.id);
-  }, [session, load]);
+    load();
+  }, [load]);
 
   const byDay = useMemo(() => new Map(entries.map((e) => [e.day_number, e])), [entries]);
 

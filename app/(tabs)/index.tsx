@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/store/useAuth';
+import { OWNER_ID } from '@/store/useAuth';
 import { useChallenge } from '@/store/useChallenge';
 import { computeDayProgress } from '@/lib/streak';
 import { TASK_GOALS } from '@/types/challenge';
@@ -20,7 +20,6 @@ import { captureProgressPhoto, uploadProgressPhoto } from '@/lib/photo';
 import { colors } from '@/theme/colors';
 
 export default function Home() {
-  const { session } = useAuth();
   const {
     loading,
     challenge,
@@ -33,10 +32,10 @@ export default function Home() {
   } = useChallenge();
 
   useEffect(() => {
-    if (session) load(session.user.id);
-  }, [session, load]);
+    load();
+  }, [load]);
 
-  if (loading || !challenge || !session) {
+  if (loading || !challenge) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.center}>
@@ -61,12 +60,7 @@ export default function Home() {
     const uri = await captureProgressPhoto();
     if (!uri) return;
     try {
-      const path = await uploadProgressPhoto(
-        uri,
-        session!.user.id,
-        challenge!.id,
-        currentDay,
-      );
+      const path = await uploadProgressPhoto(uri, OWNER_ID, challenge!.id, currentDay);
       await upsertToday({ progress_photo_url: path });
     } catch (err: any) {
       Alert.alert('Erro ao enviar foto', err.message);

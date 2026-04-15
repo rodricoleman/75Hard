@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import type { Challenge, DailyEntry } from '@/types/challenge';
 import { getCurrentDay, hasFailedBefore, todayISO } from '@/lib/streak';
+import { OWNER_ID } from './useAuth';
 
 type State = {
   loading: boolean;
@@ -10,15 +11,15 @@ type State = {
   todayEntry: DailyEntry | null;
   currentDay: number;
   justReset: { failedDay: number } | null;
-  load: (userId: string) => Promise<void>;
+  load: () => Promise<void>;
   upsertToday: (patch: Partial<DailyEntry>) => Promise<void>;
   ackReset: () => void;
 };
 
-async function createChallenge(userId: string): Promise<Challenge> {
+async function createChallenge(): Promise<Challenge> {
   const { data, error } = await supabase
     .from('h75_challenges')
-    .insert({ user_id: userId })
+    .insert({ user_id: OWNER_ID })
     .select()
     .single();
   if (error) throw error;
@@ -33,13 +34,13 @@ export const useChallenge = create<State>((set, get) => ({
   currentDay: 1,
   justReset: null,
 
-  async load(userId) {
+  async load() {
     set({ loading: true });
 
     let { data: active } = await supabase
       .from('h75_challenges')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', OWNER_ID)
       .is('failed_at', null)
       .is('completed_at', null)
       .order('started_at', { ascending: false })
@@ -47,7 +48,7 @@ export const useChallenge = create<State>((set, get) => ({
       .maybeSingle();
 
     if (!active) {
-      active = await createChallenge(userId);
+      active = await createChallenge();
     }
 
     const challenge = active as Challenge;
@@ -64,7 +65,7 @@ export const useChallenge = create<State>((set, get) => ({
         .from('h75_challenges')
         .update({ failed_at: todayISO() })
         .eq('id', challenge.id);
-      const fresh = await createChallenge(userId);
+      const fresh = await createChallenge();
       set({
         challenge: fresh,
         entries: [],

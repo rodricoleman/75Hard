@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/store/useAuth';
 import {
   cancelAllNotifications,
   getScheduledNotifications,
@@ -12,7 +11,6 @@ import {
 import { colors } from '@/theme/colors';
 
 export default function Settings() {
-  const { session, signOut } = useAuth();
   const [enabled, setEnabled] = useState(false);
   const [hour, setHour] = useState(7);
 
@@ -51,12 +49,6 @@ export default function Settings() {
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.h1}>AJUSTES</Text>
 
-        <Text style={styles.section}>CONTA</Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{session?.user.email}</Text>
-        </View>
-
         <Text style={styles.section}>LEMBRETE DIÁRIO</Text>
         <View style={styles.card}>
           <View style={styles.rowBetween}>
@@ -82,9 +74,6 @@ export default function Settings() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logout} onPress={signOut}>
-          <Text style={styles.logoutText}>SAIR</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
