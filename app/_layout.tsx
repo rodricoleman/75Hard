@@ -19,7 +19,7 @@ function AuthGate() {
     const inAuth = first === '(auth)';
     try {
       if (!session && !inAuth) router.replace('/(auth)/login');
-      else if (session && inAuth) router.replace('/(tabs)');
+      else if (session && inAuth) router.replace('/(tabs)/feed');
     } catch (e) {
       console.warn('[AuthGate] nav error', e);
     }

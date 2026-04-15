@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { PostCard } from '@/components/PostCard';
+import { TodayBanner } from '@/components/TodayBanner';
 import { fetchFeed, toggleLike, type FeedPost } from '@/lib/social';
 import { useAuth } from '@/store/useAuth';
+import { useFeedBadge } from '@/store/useFeedBadge';
 import { colors } from '@/theme/colors';
 
 export default function FeedTab() {
@@ -30,6 +32,13 @@ export default function FeedTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      useFeedBadge.getState().markSeen();
+      load();
+    }, [load]),
+  );
 
   async function onToggleLike(post: FeedPost) {
     if (!userId) return;
@@ -61,6 +70,7 @@ export default function FeedTab() {
         data={posts}
         keyExtractor={(p) => p.id}
         renderItem={({ item }) => <PostCard post={item} onToggleLike={onToggleLike} />}
+        ListHeaderComponent={<TodayBanner />}
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl

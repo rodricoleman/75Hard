@@ -5,5 +5,5 @@ export default function Index() {
   const booting = useAuth((s) => s.booting);
   const session = useAuth((s) => s.session);
   if (booting) return null;
-  return session ? <Redirect href="/(tabs)" /> : <Redirect href="/(auth)/login" />;
+  return session ? <Redirect href="/(tabs)/feed" /> : <Redirect href="/(auth)/login" />;
 }

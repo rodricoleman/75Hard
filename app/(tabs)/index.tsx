@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import {
   Alert,
   Modal,
@@ -27,14 +26,9 @@ export default function Home() {
     todayEntry,
     currentDay,
     justReset,
-    load,
     upsertToday,
     ackReset,
   } = useChallenge();
-
-  useEffect(() => {
-    if (userId) load();
-  }, [userId, load]);
 
   if (loading || !challenge) {
     return (
