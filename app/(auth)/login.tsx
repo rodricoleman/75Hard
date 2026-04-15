@@ -1,39 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 
-type Step = 'email' | 'code';
+const OWNER_EMAIL = 'rodrigocoleman26@gmail.com';
 
 export default function Login() {
-  const [step, setStep] = useState<Step>('email');
-  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [sent, setSent] = useState(false);
 
   async function sendCode() {
-    if (!email.includes('@')) return Alert.alert('Email inválido');
-    setBusy(true);
+    setSending(true);
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
+      email: OWNER_EMAIL,
       options: { shouldCreateUser: true },
     });
-    setBusy(false);
+    setSending(false);
     if (error) return Alert.alert('Erro', error.message);
-    setStep('code');
+    setSent(true);
   }
 
-  async function verifyCode() {
-    if (code.length < 6) return Alert.alert('Código incompleto');
-    setBusy(true);
+  useEffect(() => {
+    sendCode();
+  }, []);
+
+  async function verify() {
+    if (code.length < 6) return;
+    setVerifying(true);
     const { error } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
+      email: OWNER_EMAIL,
       token: code.trim(),
       type: 'email',
     });
-    setBusy(false);
-    if (error) return Alert.alert('Código inválido', error.message);
+    setVerifying(false);
+    if (error) {
+      Alert.alert('Código inválido', error.message);
+      setCode('');
+    }
   }
 
   return (
@@ -44,54 +50,37 @@ export default function Login() {
         </Text>
         <Text style={styles.subtitle}>Disciplina diária. Sem desculpa.</Text>
 
-        {step === 'email' ? (
-          <>
-            <TextInput
-              style={styles.input}
-              placeholder="seu@email.com"
-              placeholderTextColor={colors.textDim}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <TouchableOpacity
-              style={[styles.button, busy && { opacity: 0.5 }]}
-              disabled={busy}
-              onPress={sendCode}
-            >
-              <Text style={styles.buttonText}>{busy ? 'Enviando…' : 'Receber código'}</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.hint}>Enviamos um código de 6 dígitos para {email}.</Text>
-            <TextInput
-              style={[styles.input, styles.code]}
-              placeholder="000000"
-              placeholderTextColor={colors.textDim}
-              keyboardType="number-pad"
-              maxLength={6}
-              value={code}
-              onChangeText={setCode}
-            />
-            <TouchableOpacity
-              style={[styles.button, busy && { opacity: 0.5 }]}
-              disabled={busy}
-              onPress={verifyCode}
-            >
-              <Text style={styles.buttonText}>{busy ? 'Verificando…' : 'Entrar'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setStep('email');
-                setCode('');
-              }}
-            >
-              <Text style={styles.link}>Usar outro email</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <Text style={styles.hint}>
+          {sending
+            ? 'Enviando código…'
+            : sent
+            ? 'Código enviado. Verifique seu email.'
+            : ''}
+        </Text>
+
+        <TextInput
+          style={[styles.input, styles.code]}
+          placeholder="000000"
+          placeholderTextColor={colors.textDim}
+          keyboardType="number-pad"
+          maxLength={6}
+          value={code}
+          onChangeText={setCode}
+          autoFocus
+          editable={sent}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, (verifying || code.length < 6) && { opacity: 0.5 }]}
+          disabled={verifying || code.length < 6}
+          onPress={verify}
+        >
+          <Text style={styles.buttonText}>{verifying ? 'Verificando…' : 'Entrar'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={sendCode} disabled={sending}>
+          <Text style={styles.link}>{sending ? '…' : 'Reenviar código'}</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -102,7 +91,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 28, justifyContent: 'center' },
   brand: { color: colors.text, fontSize: 52, fontWeight: '900', letterSpacing: -2 },
   subtitle: { color: colors.textMuted, fontSize: 15, marginTop: 6, marginBottom: 40 },
-  hint: { color: colors.textMuted, fontSize: 14, marginBottom: 16 },
+  hint: { color: colors.textMuted, fontSize: 14, marginBottom: 16, minHeight: 20 },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
