@@ -77,14 +77,12 @@ export function PostCard({ post, onToggleLike }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    marginBottom: 14,
-    overflow: 'hidden',
+    backgroundColor: colors.bg,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    marginBottom: 6,
   },
-  header: { padding: 12 },
+  header: { paddingHorizontal: 12, paddingVertical: 10 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: {
     width: 36,

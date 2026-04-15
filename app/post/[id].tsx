@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   addComment,
@@ -29,6 +29,7 @@ export default function PostDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useAuth((s) => s.user?.id);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [post, setPost] = useState<FeedPost | null>(null);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [text, setText] = useState('');
@@ -106,7 +107,7 @@ export default function PostDetail() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={80}
+        keyboardVerticalOffset={0}
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
@@ -148,15 +149,18 @@ export default function PostDetail() {
           contentContainerStyle={styles.list}
         />
 
-        <View style={styles.composer}>
+        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
           <TextInput
             value={text}
             onChangeText={setText}
             placeholder="Comentar..."
             placeholderTextColor={colors.textDim}
             style={styles.input}
+            returnKeyType="send"
+            onSubmitEditing={onSend}
+            blurOnSubmit={false}
           />
-          <TouchableOpacity style={styles.sendBtn} onPress={onSend} disabled={sending}>
+          <TouchableOpacity style={styles.sendBtn} onPress={onSend} disabled={sending || !text.trim()}>
             <Text style={styles.sendTxt}>{sending ? '…' : 'ENVIAR'}</Text>
           </TouchableOpacity>
         </View>
@@ -198,24 +202,31 @@ const styles = StyleSheet.create({
   noComments: { color: colors.textDim, textAlign: 'center', paddingVertical: 20 },
   composer: {
     flexDirection: 'row',
+    alignItems: 'center',
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingTop: 10,
     gap: 8,
     backgroundColor: colors.bg,
   },
   input: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
     color: colors.text,
+    fontSize: 14,
+    minHeight: 40,
   },
   sendBtn: {
     backgroundColor: colors.neon,
-    borderRadius: 10,
+    borderRadius: 20,
     paddingHorizontal: 16,
+    height: 40,
     justifyContent: 'center',
   },
   sendTxt: { color: '#000', fontWeight: '900', fontSize: 12, letterSpacing: 1 },

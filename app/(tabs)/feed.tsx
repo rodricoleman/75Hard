@@ -102,6 +102,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   newBtnText: { color: '#000', fontWeight: '900', letterSpacing: 1, fontSize: 12 },
-  list: { padding: 16, paddingBottom: 80 },
+  list: { paddingTop: 4, paddingBottom: 80 },
   empty: { color: colors.textMuted, textAlign: 'center', marginTop: 60, paddingHorizontal: 24 },
 });
