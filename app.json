@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "75Hard",
+    "slug": "app-75hard",
+    "scheme": "h75",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rodricoleman.app75hard"
+    },
+    "android": {
+      "package": "com.rodricoleman.app75hard",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0A0A0A"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir acesso \u00e0s fotos para anexar foto de progresso.",
+          "cameraPermission": "Permitir acesso \u00e0 c\u00e2mera para capturar foto de progresso di\u00e1ria."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#C6FF00"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
