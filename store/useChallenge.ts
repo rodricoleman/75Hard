@@ -109,13 +109,18 @@ export const useChallenge = create<State>((set, get) => ({
       ...writable,
       ...patch,
     };
+    console.log('[h75] upsert payload', payload);
     const { data, error } = await supabase
       .from('h75_daily_entries')
       .upsert(payload, { onConflict: 'challenge_id,day_number' })
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      console.error('[h75] upsert error', error);
+      throw error;
+    }
     const updated = data as DailyEntry;
+    console.log('[h75] upsert ok', updated);
     const entries = [...get().entries.filter((e) => e.day_number !== currentDay), updated];
     set({ todayEntry: updated, entries });
   },

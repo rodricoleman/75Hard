@@ -53,8 +53,10 @@ export default function Home() {
       Alert.alert('Erro', err.message),
     );
 
-  const setWater = (v: number) => upsertToday({ water_ml: v });
-  const setReading = (v: number) => upsertToday({ reading_pages: v });
+  const setWater = (v: number) =>
+    upsertToday({ water_ml: v }).catch((err) => Alert.alert('Erro', err.message));
+  const setReading = (v: number) =>
+    upsertToday({ reading_pages: v }).catch((err) => Alert.alert('Erro', err.message));
 
   async function onPhoto() {
     const uri = await captureProgressPhoto();
