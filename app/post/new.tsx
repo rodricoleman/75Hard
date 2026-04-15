@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -25,16 +24,19 @@ export default function NewPost() {
   const [uri, setUri] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onSubmit() {
-    if (!userId || !uri) return Alert.alert('Escolha uma foto');
+    setError(null);
+    if (!userId) return setError('Sessão expirada. Faça login novamente.');
+    if (!uri) return setError('Escolha uma foto primeiro.');
     setUploading(true);
     try {
       const photoUrl = await uploadSocialPhoto(uri, userId);
       await createPost(userId, photoUrl, caption);
       router.replace('/(tabs)/feed');
     } catch (e: any) {
-      Alert.alert('Erro ao postar', e.message);
+      setError(e?.message ?? 'Erro ao publicar.');
     } finally {
       setUploading(false);
     }
@@ -94,6 +96,12 @@ export default function NewPost() {
             multiline
             numberOfLines={4}
           />
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity style={styles.submit} onPress={onSubmit} disabled={uploading}>
             {uploading ? (
@@ -166,4 +174,13 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   submitTxt: { color: '#000', fontWeight: '900', letterSpacing: 2 },
+  errorBox: {
+    backgroundColor: '#2A0F0F',
+    borderColor: colors.danger,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 16,
+  },
+  errorText: { color: colors.danger, fontSize: 13, lineHeight: 18 },
 });
