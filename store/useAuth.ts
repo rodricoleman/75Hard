@@ -1,6 +1,10 @@
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+export const STAY_CONNECTED_KEY = '@h75:stayConnected';
 
 export type Profile = {
   id: string;
@@ -51,7 +55,24 @@ export const useAuth = create<State>((set, get) => ({
         set({ profile: null });
       }
     });
-    return () => sub.subscription.unsubscribe();
+
+    // "Manter conectado" OFF no web → encerra a sessão ao fechar a aba.
+    let unloadHandler: (() => void) | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      unloadHandler = () => {
+        AsyncStorage.getItem(STAY_CONNECTED_KEY).then((v) => {
+          if (v === 'false') supabase.auth.signOut();
+        });
+      };
+      window.addEventListener('beforeunload', unloadHandler);
+    }
+
+    return () => {
+      sub.subscription.unsubscribe();
+      if (unloadHandler && typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', unloadHandler);
+      }
+    };
   },
 
   async refreshProfile() {
