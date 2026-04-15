@@ -4,40 +4,47 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 
-export default function Login() {
-  const [email, setEmail] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+type Step = 'email' | 'code';
 
-  async function onSend() {
+export default function Login() {
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function sendCode() {
     if (!email.includes('@')) return Alert.alert('Email inválido');
-    setSending(true);
+    setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: { shouldCreateUser: true },
     });
-    setSending(false);
+    setBusy(false);
     if (error) return Alert.alert('Erro', error.message);
-    setSent(true);
+    setStep('code');
+  }
+
+  async function verifyCode() {
+    if (code.length < 6) return Alert.alert('Código incompleto');
+    setBusy(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: code.trim(),
+      type: 'email',
+    });
+    setBusy(false);
+    if (error) return Alert.alert('Código inválido', error.message);
   }
 
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.container}>
-        <Text style={styles.brand}>75<Text style={{ color: colors.neon }}>HARD</Text></Text>
+        <Text style={styles.brand}>
+          75<Text style={{ color: colors.neon }}>HARD</Text>
+        </Text>
         <Text style={styles.subtitle}>Disciplina diária. Sem desculpa.</Text>
 
-        {sent ? (
-          <View style={styles.sentBox}>
-            <Text style={styles.sentTitle}>Código enviado</Text>
-            <Text style={styles.sentText}>
-              Abra o email {email} e use o link mágico para entrar.
-            </Text>
-            <TouchableOpacity onPress={() => setSent(false)}>
-              <Text style={styles.link}>Usar outro email</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
+        {step === 'email' ? (
           <>
             <TextInput
               style={styles.input}
@@ -49,11 +56,39 @@ export default function Login() {
               onChangeText={setEmail}
             />
             <TouchableOpacity
-              style={[styles.button, sending && { opacity: 0.5 }]}
-              disabled={sending}
-              onPress={onSend}
+              style={[styles.button, busy && { opacity: 0.5 }]}
+              disabled={busy}
+              onPress={sendCode}
             >
-              <Text style={styles.buttonText}>{sending ? 'Enviando…' : 'Enviar link mágico'}</Text>
+              <Text style={styles.buttonText}>{busy ? 'Enviando…' : 'Receber código'}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.hint}>Enviamos um código de 6 dígitos para {email}.</Text>
+            <TextInput
+              style={[styles.input, styles.code]}
+              placeholder="000000"
+              placeholderTextColor={colors.textDim}
+              keyboardType="number-pad"
+              maxLength={6}
+              value={code}
+              onChangeText={setCode}
+            />
+            <TouchableOpacity
+              style={[styles.button, busy && { opacity: 0.5 }]}
+              disabled={busy}
+              onPress={verifyCode}
+            >
+              <Text style={styles.buttonText}>{busy ? 'Verificando…' : 'Entrar'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setStep('email');
+                setCode('');
+              }}
+            >
+              <Text style={styles.link}>Usar outro email</Text>
             </TouchableOpacity>
           </>
         )}
@@ -67,6 +102,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 28, justifyContent: 'center' },
   brand: { color: colors.text, fontSize: 52, fontWeight: '900', letterSpacing: -2 },
   subtitle: { color: colors.textMuted, fontSize: 15, marginTop: 6, marginBottom: 40 },
+  hint: { color: colors.textMuted, fontSize: 14, marginBottom: 16 },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -78,6 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
   },
+  code: { textAlign: 'center', letterSpacing: 12, fontSize: 24, fontWeight: '700' },
   button: {
     backgroundColor: colors.neon,
     borderRadius: 12,
@@ -85,8 +122,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: '#000', fontSize: 16, fontWeight: '700' },
-  sentBox: { gap: 12 },
-  sentTitle: { color: colors.neon, fontSize: 22, fontWeight: '800' },
-  sentText: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
-  link: { color: colors.neon, marginTop: 16, fontWeight: '600' },
+  link: { color: colors.neon, marginTop: 20, fontWeight: '600', textAlign: 'center' },
 });
