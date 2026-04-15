@@ -59,19 +59,48 @@ function extFromMime(mime: string | undefined, fallback: string): string {
   return fallback;
 }
 
+async function reencodeImageWeb(source: Blob | File): Promise<Blob> {
+  const MAX_DIM = 1600;
+  const QUALITY = 0.82;
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Não foi possível decodificar a imagem.'));
+      el.src = objectUrl;
+    });
+    const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas indisponível.');
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', QUALITY),
+    );
+    if (!blob) throw new Error('Falha ao reencodar a imagem.');
+    return blob;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function uriToUpload(uri: string): Promise<{ body: Blob | Uint8Array; ext: string; contentType: string }> {
   const rawExt = (uri.split('.').pop() || 'jpg').split('?')[0].toLowerCase();
   if (Platform.OS === 'web') {
     const cached = assetCache.get(uri);
-    if (cached) {
-      const ext = extFromMime(cached.type, rawExt);
-      return { body: cached, ext, contentType: cached.type || `image/${ext}` };
+    let source: Blob | File | null = cached ?? null;
+    if (!source) {
+      const res = await fetch(uri);
+      if (!res.ok) throw new Error(`Falha ao ler a imagem (${res.status}).`);
+      source = await res.blob();
     }
-    const res = await fetch(uri);
-    if (!res.ok) throw new Error(`Falha ao ler a imagem (${res.status}).`);
-    const blob = await res.blob();
-    const ext = extFromMime(blob.type, rawExt);
-    return { body: blob, ext, contentType: blob.type || `image/${ext}` };
+    const jpeg = await reencodeImageWeb(source);
+    return { body: jpeg, ext: 'jpg', contentType: 'image/jpeg' };
   }
   const FileSystem = require('expo-file-system') as typeof import('expo-file-system');
   const base64 = await FileSystem.readAsStringAsync(uri, {
