@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,14 +23,16 @@ export default function SignUp() {
   const [displayName, setDisplayName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onSubmit() {
+    setError(null);
     if (!email || !password || !username || !inviteCode) {
-      return Alert.alert('Preencha todos os campos obrigatórios');
+      return setError('Preencha todos os campos obrigatórios.');
     }
-    if (password.length < 6) return Alert.alert('Senha precisa de 6+ caracteres');
+    if (password.length < 6) return setError('Senha precisa de 6+ caracteres.');
     if (!/^[a-z0-9_]{3,20}$/i.test(username)) {
-      return Alert.alert('Username inválido', 'Use 3-20 letras, números ou _');
+      return setError('Username inválido. Use 3-20 letras, números ou _.');
     }
     setLoading(true);
     try {
@@ -43,7 +44,7 @@ export default function SignUp() {
         displayName,
       });
     } catch (e: any) {
-      Alert.alert('Erro no cadastro', e.message);
+      setError(e?.message ?? 'Erro no cadastro.');
     } finally {
       setLoading(false);
     }
@@ -91,6 +92,12 @@ export default function SignUp() {
               secureTextEntry
             />
 
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity style={styles.btn} onPress={onSubmit} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color="#000" />
@@ -128,4 +135,13 @@ const styles = StyleSheet.create({
   btnText: { color: '#000', fontWeight: '900', letterSpacing: 2 },
   linkBtn: { marginTop: 24, alignItems: 'center' },
   linkText: { color: colors.textMuted, fontSize: 14 },
+  errorBox: {
+    backgroundColor: '#2A0F0F',
+    borderColor: colors.danger,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorText: { color: colors.danger, fontSize: 13, lineHeight: 18 },
 });

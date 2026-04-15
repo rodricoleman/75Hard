@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,6 +22,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [stayConnected, setStayConnected] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(STAY_CONNECTED_KEY).then((v) => {
@@ -37,13 +37,14 @@ export default function Login() {
   }
 
   async function onSubmit() {
-    if (!email || !password) return Alert.alert('Preencha email e senha');
+    setError(null);
+    if (!email || !password) return setError('Preencha email e senha.');
     setLoading(true);
     try {
       await AsyncStorage.setItem(STAY_CONNECTED_KEY, stayConnected ? 'true' : 'false');
       await signIn(email.trim(), password);
     } catch (e: any) {
-      Alert.alert('Erro ao entrar', e.message);
+      setError(e?.message ?? 'Erro ao entrar.');
     } finally {
       setLoading(false);
     }
@@ -77,6 +78,12 @@ export default function Login() {
               secureTextEntry
               autoComplete="password"
             />
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
             <TouchableOpacity onPress={toggleStay} style={styles.stayRow} activeOpacity={0.7}>
               <View style={[styles.checkbox, stayConnected && styles.checkboxOn]}>
@@ -142,4 +149,13 @@ const styles = StyleSheet.create({
   checkboxOn: { backgroundColor: colors.neon, borderColor: colors.neon },
   checkTxt: { color: '#000', fontWeight: '900', fontSize: 14 },
   stayLabel: { color: colors.textMuted, fontSize: 14, flex: 1 },
+  errorBox: {
+    backgroundColor: '#2A0F0F',
+    borderColor: colors.danger,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorText: { color: colors.danger, fontSize: 13, lineHeight: 18 },
 });
