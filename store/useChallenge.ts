@@ -112,7 +112,19 @@ export const useChallenge = create<State>((set, get) => ({
       p_diet_enabled: goals.diet_enabled,
       p_max_misses: goals.max_misses,
     });
-    if (error) throw error;
+    if (error) {
+      // Sessão órfã (JWT de usuário deletado) → desloga pra voltar ao login.
+      const msg = (error.message || '').toLowerCase();
+      if (
+        msg.includes('h75_challenges_user_id_fkey') ||
+        msg.includes('violates foreign key') ||
+        msg.includes('not authenticated')
+      ) {
+        await supabase.auth.signOut().catch(() => {});
+        useAuth.getState().signOut?.().catch(() => {});
+      }
+      throw error;
+    }
     const challenge = data as Challenge;
     set({
       challenge,

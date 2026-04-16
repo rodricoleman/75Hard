@@ -39,12 +39,24 @@ export const useAuth = create<State>((set, get) => ({
 
   async init() {
     const { data } = await supabase.auth.getSession();
-    set({
-      session: data.session,
-      user: data.session?.user ?? null,
-      booting: false,
-    });
-    if (data.session?.user) {
+    let session = data.session;
+    let user = session?.user ?? null;
+
+    if (session) {
+      // Valida no servidor — se a conta foi deletada, o JWT ainda pode parecer válido
+      // localmente mas getUser() retorna erro. Nesse caso, encerra a sessão.
+      const { data: ures, error: uerr } = await supabase.auth.getUser();
+      if (uerr || !ures?.user) {
+        await supabase.auth.signOut().catch(() => {});
+        session = null;
+        user = null;
+      } else {
+        user = ures.user;
+      }
+    }
+
+    set({ session, user, booting: false });
+    if (user) {
       await get().refreshProfile();
     }
     const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, session) => {
