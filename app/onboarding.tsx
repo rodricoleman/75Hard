@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { addDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import {
   Platform,
   Pressable,
@@ -23,8 +25,27 @@ import { TASK_LIMITS, DEFAULT_GOALS, TOLERANCE_OPTIONS } from '@/types/challenge
 import { colors } from '@/theme/colors';
 import { type, fonts } from '@/theme/tokens';
 
-type StepId = 'intro' | 'indoor' | 'outdoor' | 'water' | 'diet' | 'reading' | 'tolerance' | 'summary';
-const STEPS: StepId[] = ['intro', 'indoor', 'outdoor', 'water', 'diet', 'reading', 'tolerance', 'summary'];
+type StepId =
+  | 'intro'
+  | 'indoor'
+  | 'outdoor'
+  | 'water'
+  | 'diet'
+  | 'reading'
+  | 'tolerance'
+  | 'start'
+  | 'summary';
+const STEPS: StepId[] = [
+  'intro',
+  'indoor',
+  'outdoor',
+  'water',
+  'diet',
+  'reading',
+  'tolerance',
+  'start',
+  'summary',
+];
 
 function fireHaptic(kind: 'light' | 'success' = 'light') {
   if (Platform.OS === 'web') return;
@@ -47,6 +68,7 @@ export default function Onboarding() {
   const [diet, setDiet] = useState<boolean>(DEFAULT_GOALS.diet_enabled);
   const [reading, setReading] = useState<number>(DEFAULT_GOALS.reading_pages_goal);
   const [maxMisses, setMaxMisses] = useState<number>(DEFAULT_GOALS.max_misses);
+  const [startOffset, setStartOffset] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +102,8 @@ export default function Onboarding() {
     setError(null);
     setSubmitting(true);
     try {
-      await startChallenge(goals);
+      const startDate = format(addDays(new Date(), startOffset), 'yyyy-MM-dd');
+      await startChallenge(goals, startDate);
       fireHaptic('success');
       router.replace('/(tabs)/feed');
     } catch (e: any) {
@@ -195,8 +218,12 @@ export default function Onboarding() {
             <ToleranceStep value={maxMisses} onChange={setMaxMisses} />
           ) : null}
 
+          {step === 'start' ? (
+            <StartDateStep value={startOffset} onChange={setStartOffset} />
+          ) : null}
+
           {step === 'summary' ? (
-            <SummaryStep goals={goals} />
+            <SummaryStep goals={goals} startOffset={startOffset} />
           ) : null}
         </Animated.View>
 
@@ -573,9 +600,110 @@ function ToleranceCard({
   );
 }
 
-function SummaryStep({ goals }: { goals: ChallengeGoals }) {
+function StartDateStep({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const MAX_OFFSET = 60;
+  const clamp = (v: number) => Math.max(0, Math.min(MAX_OFFSET, v));
+  const startDate = addDays(new Date(), value);
+  const dayLabel = format(startDate, "EEEE, d 'de' MMMM", { locale: ptBR });
+  const endDate = addDays(startDate, 74);
+  const endLabel = format(endDate, "d 'de' MMM 'de' yyyy", { locale: ptBR });
+
+  const presets: { offset: number; label: string }[] = [
+    { offset: 0, label: 'HOJE' },
+    { offset: 1, label: 'AMANHÃ' },
+    { offset: 7, label: 'EM 1 SEMANA' },
+  ];
+
+  return (
+    <View style={styles.stepWrap}>
+      <Text style={styles.eyebrow}>DATA DE INÍCIO</Text>
+      <Text style={styles.stepIcon}>📅</Text>
+      <Text style={styles.stepTitle}>Quando você começa?</Text>
+      <Text style={styles.stepDesc}>
+        O Dia 1 cai na data que você escolher. Pode ser hoje mesmo ou daqui a algumas semanas — se
+        preparar antes ajuda a chegar focado.
+      </Text>
+
+      <View style={styles.pickerCard}>
+        <View style={styles.pickerRow}>
+          <PickerBtn
+            label="−7"
+            onPress={() => onChange(clamp(value - 7))}
+            disabled={value <= 0}
+          />
+          <PickerBtn
+            label="−"
+            onPress={() => onChange(clamp(value - 1))}
+            disabled={value <= 0}
+            small
+          />
+          <View style={styles.valueDisplay}>
+            <Text style={styles.dateBigTxt}>
+              {format(startDate, 'd', { locale: ptBR })}
+              <Text style={styles.dateMonthTxt}> {format(startDate, 'MMM', { locale: ptBR })}</Text>
+            </Text>
+            <Text style={styles.dateWeekdayTxt}>{dayLabel}</Text>
+          </View>
+          <PickerBtn
+            label="+"
+            onPress={() => onChange(clamp(value + 1))}
+            disabled={value >= MAX_OFFSET}
+            small
+          />
+          <PickerBtn
+            label="+7"
+            onPress={() => onChange(clamp(value + 7))}
+            disabled={value >= MAX_OFFSET}
+          />
+        </View>
+
+        <View style={styles.presets}>
+          {presets.map((p) => {
+            const active = p.offset === value;
+            return (
+              <Pressable
+                key={p.offset}
+                onPress={() => {
+                  fireHaptic();
+                  onChange(clamp(p.offset));
+                }}
+                style={[styles.preset, active && styles.presetActive]}
+              >
+                <Text style={[styles.presetTxt, active && styles.presetTxtActive]}>{p.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.hintRow}>
+          <Text style={styles.hintLabel}>TERMINA EM</Text>
+          <Text style={styles.hintVal}>{endLabel}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function SummaryStep({ goals, startOffset }: { goals: ChallengeGoals; startOffset: number }) {
   const totalTasks = goals.diet_enabled ? 6 : 5;
   const tolerance = TOLERANCE_OPTIONS.find((o) => o.maxMisses === goals.max_misses);
+  const startDate = addDays(new Date(), startOffset);
+  const startLabel =
+    startOffset === 0
+      ? 'HOJE'
+      : startOffset === 1
+        ? 'AMANHÃ'
+        : format(startDate, "d 'de' MMM", { locale: ptBR }).toUpperCase();
+  const startSub =
+    startOffset === 0
+      ? format(startDate, "EEEE, d 'de' MMM", { locale: ptBR })
+      : `daqui a ${startOffset} ${startOffset === 1 ? 'dia' : 'dias'}`;
   return (
     <View style={styles.stepWrap}>
       <Animated.View entering={ZoomIn.duration(360)} style={styles.summaryBadge}>
@@ -586,6 +714,7 @@ function SummaryStep({ goals }: { goals: ChallengeGoals }) {
       </Animated.Text>
 
       <Animated.View entering={FadeIn.duration(400).delay(240)} style={styles.ruleList}>
+        <RuleCard icon="📅" label="Dia 1" value={startLabel} sub={startSub} />
         <RuleCard
           icon="💪"
           label="Treino indoor"
@@ -1070,5 +1199,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     paddingLeft: 34,
+  },
+
+  // Start date
+  dateBigTxt: {
+    fontFamily: fonts.mono,
+    color: colors.neon,
+    fontSize: 40,
+    fontWeight: '900',
+    letterSpacing: -2,
+    textAlign: 'center',
+  },
+  dateMonthTxt: {
+    color: colors.text,
+    fontSize: 18,
+    letterSpacing: 0,
+    textTransform: 'uppercase',
+  },
+  dateWeekdayTxt: {
+    fontFamily: fonts.mono,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 4,
+    textTransform: 'uppercase',
   },
 });

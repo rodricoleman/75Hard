@@ -13,7 +13,7 @@ type State = {
   currentDay: number;
   justReset: { failedDay: number } | null;
   load: () => Promise<void>;
-  startChallenge: (goals: ChallengeGoals) => Promise<void>;
+  startChallenge: (goals: ChallengeGoals, startedAt?: string) => Promise<void>;
   upsertToday: (patch: Partial<DailyEntry>) => Promise<void>;
   ackReset: () => void;
   reset: () => void;
@@ -103,7 +103,7 @@ export const useChallenge = create<State>((set, get) => ({
     });
   },
 
-  async startChallenge(goals) {
+  async startChallenge(goals, startedAt) {
     const { data, error } = await supabase.rpc('h75_start_challenge', {
       p_workout_indoor_min: goals.workout_indoor_min,
       p_workout_outdoor_min: goals.workout_outdoor_min,
@@ -111,6 +111,7 @@ export const useChallenge = create<State>((set, get) => ({
       p_reading_pages_goal: goals.reading_pages_goal,
       p_diet_enabled: goals.diet_enabled,
       p_max_misses: goals.max_misses,
+      ...(startedAt ? { p_started_at: startedAt } : {}),
     });
     if (error) {
       // Sessão órfã (JWT de usuário deletado) → desloga pra voltar ao login.
