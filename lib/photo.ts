@@ -102,12 +102,12 @@ async function uriToUpload(uri: string): Promise<{ body: Blob | Uint8Array; ext:
     const jpeg = await reencodeImageWeb(source);
     return { body: jpeg, ext: 'jpg', contentType: 'image/jpeg' };
   }
-  const FileSystem = require('expo-file-system') as typeof import('expo-file-system');
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  return { body: bytes, ext: rawExt, contentType: `image/${rawExt}` };
+  // React Native: fetch local URI directly — much faster than base64 + atob
+  const res = await fetch(uri);
+  const blob = await res.blob();
+  const contentType = blob.type || `image/${rawExt}`;
+  const ext = extFromMime(blob.type, rawExt);
+  return { body: blob, ext, contentType };
 }
 
 export async function uploadProgressPhoto(
