@@ -10,9 +10,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useAuth } from '@/store/useAuth';
-import { useChallenge } from '@/store/useChallenge';
-import { computeDayProgress } from '@/lib/streak';
-import { TASK_GOALS } from '@/types/challenge';
+import { useChallenge, goalsFromChallenge } from '@/store/useChallenge';
+import { computeDayProgress, countTasksDone } from '@/lib/streak';
+import { TASK_LIMITS } from '@/types/challenge';
 import { DayRing } from '@/components/DayRing';
 import { TaskRow } from '@/components/TaskRow';
 import { CounterInput } from '@/components/CounterInput';
@@ -42,8 +42,9 @@ export default function Home() {
     );
   }
 
+  const goals = goalsFromChallenge(challenge);
   const e = todayEntry ?? {};
-  const progress = computeDayProgress(e);
+  const progress = computeDayProgress(e, goals);
   const pct = Math.round(progress * 100);
 
   const toggle = (key: 'workout_indoor' | 'workout_outdoor' | 'diet') =>
@@ -83,7 +84,7 @@ export default function Home() {
         </Animated.View>
 
         <Animated.View entering={ZoomIn.duration(600).delay(120)} style={styles.ringWrap}>
-          <DayRing day={currentDay} total={TASK_GOALS.TOTAL_DAYS} progress={progress} />
+          <DayRing day={currentDay} total={TASK_LIMITS.TOTAL_DAYS} progress={progress} />
         </Animated.View>
 
         <View style={styles.sectionRow}>
@@ -95,37 +96,41 @@ export default function Home() {
           <TaskRow
             icon="💪"
             label="Treino 1 · indoor"
-            hint="45 min"
+            hint={`${goals.workout_indoor_min} min`}
             done={!!(e as any).workout_indoor}
             onToggle={() => toggle('workout_indoor')}
           />
           <TaskRow
             icon="🏃"
             label="Treino 2 · outdoor"
-            hint="45 min ao ar livre"
+            hint={`${goals.workout_outdoor_min} min ao ar livre`}
             done={!!(e as any).workout_outdoor}
             onToggle={() => toggle('workout_outdoor')}
           />
-          <TaskRow
-            icon="🥗"
-            label="Dieta"
-            hint="Seguir o plano · zero álcool"
-            done={!!(e as any).diet}
-            onToggle={() => toggle('diet')}
-          />
+          {goals.diet_enabled ? (
+            <TaskRow
+              icon="🥗"
+              label="Dieta"
+              hint="Seguir o plano · zero álcool"
+              done={!!(e as any).diet}
+              onToggle={() => toggle('diet')}
+            />
+          ) : null}
           <TaskRow
             icon="💧"
             label="Água"
-            hint={`${((e as any).water_ml ?? 0).toLocaleString()} / ${TASK_GOALS.WATER_ML.toLocaleString()} ml`}
-            done={((e as any).water_ml ?? 0) >= TASK_GOALS.WATER_ML}
+            hint={`${((e as any).water_ml ?? 0).toLocaleString()} / ${goals.water_ml_goal.toLocaleString()} ml`}
+            done={((e as any).water_ml ?? 0) >= goals.water_ml_goal}
             onToggle={() =>
-              setWater(((e as any).water_ml ?? 0) >= TASK_GOALS.WATER_ML ? 0 : TASK_GOALS.WATER_ML)
+              setWater(
+                ((e as any).water_ml ?? 0) >= goals.water_ml_goal ? 0 : goals.water_ml_goal,
+              )
             }
             right={
               <CounterInput
                 value={(e as any).water_ml ?? 0}
                 step={250}
-                goal={TASK_GOALS.WATER_ML}
+                goal={goals.water_ml_goal}
                 suffix="ml"
                 onChange={setWater}
               />
@@ -134,20 +139,20 @@ export default function Home() {
           <TaskRow
             icon="📖"
             label="Leitura"
-            hint={`${(e as any).reading_pages ?? 0} / ${TASK_GOALS.READING_PAGES} páginas`}
-            done={((e as any).reading_pages ?? 0) >= TASK_GOALS.READING_PAGES}
+            hint={`${(e as any).reading_pages ?? 0} / ${goals.reading_pages_goal} páginas`}
+            done={((e as any).reading_pages ?? 0) >= goals.reading_pages_goal}
             onToggle={() =>
               setReading(
-                ((e as any).reading_pages ?? 0) >= TASK_GOALS.READING_PAGES
+                ((e as any).reading_pages ?? 0) >= goals.reading_pages_goal
                   ? 0
-                  : TASK_GOALS.READING_PAGES,
+                  : goals.reading_pages_goal,
               )
             }
             right={
               <CounterInput
                 value={(e as any).reading_pages ?? 0}
                 step={1}
-                goal={TASK_GOALS.READING_PAGES}
+                goal={goals.reading_pages_goal}
                 onChange={setReading}
               />
             }

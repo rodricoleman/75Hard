@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { useChallenge } from '@/store/useChallenge';
-import { TASK_GOALS } from '@/types/challenge';
+import { useChallenge, goalsFromChallenge } from '@/store/useChallenge';
+import { TASK_LIMITS } from '@/types/challenge';
 import { computeDayProgress } from '@/lib/streak';
 import { colors } from '@/theme/colors';
 import { type, fonts } from '@/theme/tokens';
@@ -15,6 +15,7 @@ export default function Stats() {
     load();
   }, [load]);
 
+  const goals = useMemo(() => goalsFromChallenge(challenge), [challenge]);
   const byDay = useMemo(() => new Map(entries.map((e) => [e.day_number, e])), [entries]);
 
   const completedDays = useMemo(
@@ -32,15 +33,15 @@ export default function Stats() {
     return s;
   }, [byDay, currentDay]);
 
-  const remaining = TASK_GOALS.TOTAL_DAYS - currentDay + 1;
-  const pctDone = Math.round((completedDays / TASK_GOALS.TOTAL_DAYS) * 100);
+  const remaining = TASK_LIMITS.TOTAL_DAYS - currentDay + 1;
+  const pctDone = Math.round((completedDays / TASK_LIMITS.TOTAL_DAYS) * 100);
 
   // Build 7-column grid (11 rows x 7 cols = 77 slots; use first 75)
   const weeks: Array<Array<number>> = [];
-  for (let i = 0; i < TASK_GOALS.TOTAL_DAYS; i += 7) {
+  for (let i = 0; i < TASK_LIMITS.TOTAL_DAYS; i += 7) {
     weeks.push(
       Array.from({ length: 7 }, (_, k) => i + k + 1).filter(
-        (d) => d <= TASK_GOALS.TOTAL_DAYS,
+        (d) => d <= TASK_LIMITS.TOTAL_DAYS,
       ),
     );
   }
@@ -70,7 +71,7 @@ export default function Stats() {
               <Text style={styles.heroMiniLabel}>COMPLETOS</Text>
               <Text style={styles.heroMiniValue}>
                 {completedDays}
-                <Text style={styles.heroMiniSuffix}>/{TASK_GOALS.TOTAL_DAYS}</Text>
+                <Text style={styles.heroMiniSuffix}>/{TASK_LIMITS.TOTAL_DAYS}</Text>
               </Text>
             </View>
             <View style={styles.heroMini}>
@@ -102,7 +103,7 @@ export default function Stats() {
                     const e = byDay.get(day);
                     const isToday = day === currentDay;
                     const isFuture = day > currentDay;
-                    const progress = e ? computeDayProgress(e as any) : 0;
+                    const progress = e ? computeDayProgress(e as any, goals) : 0;
                     return (
                       <View
                         key={day}

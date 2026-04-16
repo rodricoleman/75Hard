@@ -1,34 +1,27 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
-import type { Challenge, DailyEntry } from '@/types/challenge';
-import { getCurrentDay, hasFailedBefore, todayISO } from '@/lib/streak';
+import type { Challenge, ChallengeGoals, DailyEntry } from '@/types/challenge';
+import { getCurrentDay, goalsFromChallenge, hasFailedBefore, todayISO } from '@/lib/streak';
 import { useAuth } from './useAuth';
 
 type State = {
   loading: boolean;
+  needsOnboarding: boolean;
   challenge: Challenge | null;
   entries: DailyEntry[];
   todayEntry: DailyEntry | null;
   currentDay: number;
   justReset: { failedDay: number } | null;
   load: () => Promise<void>;
+  startChallenge: (goals: ChallengeGoals) => Promise<void>;
   upsertToday: (patch: Partial<DailyEntry>) => Promise<void>;
   ackReset: () => void;
   reset: () => void;
 };
 
-async function createChallenge(userId: string): Promise<Challenge> {
-  const { data, error } = await supabase
-    .from('h75_challenges')
-    .insert({ user_id: userId })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Challenge;
-}
-
 export const useChallenge = create<State>((set, get) => ({
   loading: true,
+  needsOnboarding: false,
   challenge: null,
   entries: [],
   todayEntry: null,
@@ -38,12 +31,19 @@ export const useChallenge = create<State>((set, get) => ({
   async load() {
     const userId = useAuth.getState().user?.id;
     if (!userId) {
-      set({ loading: false, challenge: null, entries: [], todayEntry: null, currentDay: 1 });
+      set({
+        loading: false,
+        needsOnboarding: false,
+        challenge: null,
+        entries: [],
+        todayEntry: null,
+        currentDay: 1,
+      });
       return;
     }
     set({ loading: true });
 
-    let { data: active } = await supabase
+    const { data: active } = await supabase
       .from('h75_challenges')
       .select('*')
       .eq('user_id', userId)
@@ -54,11 +54,18 @@ export const useChallenge = create<State>((set, get) => ({
       .maybeSingle();
 
     if (!active) {
-      active = await createChallenge(userId);
+      set({
+        loading: false,
+        needsOnboarding: true,
+        challenge: null,
+        entries: [],
+        todayEntry: null,
+        currentDay: 1,
+      });
+      return;
     }
 
     const challenge = active as Challenge;
-
     const { data: entries = [] } = await supabase
       .from('h75_daily_entries')
       .select('*')
@@ -71,12 +78,12 @@ export const useChallenge = create<State>((set, get) => ({
         .from('h75_challenges')
         .update({ failed_at: todayISO() })
         .eq('id', challenge.id);
-      const fresh = await createChallenge(userId);
       set({
-        challenge: fresh,
+        challenge: null,
         entries: [],
         todayEntry: null,
         currentDay: 1,
+        needsOnboarding: true,
         justReset: { failedDay: fail.failedDay! },
         loading: false,
       });
@@ -91,6 +98,29 @@ export const useChallenge = create<State>((set, get) => ({
       entries: entries as DailyEntry[],
       todayEntry: today,
       currentDay: day,
+      needsOnboarding: false,
+      loading: false,
+    });
+  },
+
+  async startChallenge(goals) {
+    const { data, error } = await supabase.rpc('h75_start_challenge', {
+      p_workout_indoor_min: goals.workout_indoor_min,
+      p_workout_outdoor_min: goals.workout_outdoor_min,
+      p_water_ml_goal: goals.water_ml_goal,
+      p_reading_pages_goal: goals.reading_pages_goal,
+      p_diet_enabled: goals.diet_enabled,
+      p_max_misses: goals.max_misses,
+    });
+    if (error) throw error;
+    const challenge = data as Challenge;
+    set({
+      challenge,
+      entries: [],
+      todayEntry: null,
+      currentDay: getCurrentDay(challenge),
+      needsOnboarding: false,
+      justReset: null,
       loading: false,
     });
   },
@@ -133,6 +163,7 @@ export const useChallenge = create<State>((set, get) => ({
   reset() {
     set({
       loading: true,
+      needsOnboarding: false,
       challenge: null,
       entries: [],
       todayEntry: null,
@@ -141,3 +172,5 @@ export const useChallenge = create<State>((set, get) => ({
     });
   },
 }));
+
+export { goalsFromChallenge };

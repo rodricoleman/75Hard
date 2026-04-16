@@ -9,23 +9,10 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { useChallenge } from '@/store/useChallenge';
-import { computeDayProgress } from '@/lib/streak';
-import { TASK_GOALS } from '@/types/challenge';
+import { useChallenge, goalsFromChallenge } from '@/store/useChallenge';
+import { computeDayProgress, countTasksDone } from '@/lib/streak';
 import { colors } from '@/theme/colors';
 import { type, fonts } from '@/theme/tokens';
-
-function countDone(e: any): number {
-  if (!e) return 0;
-  let n = 0;
-  if (e.workout_indoor) n++;
-  if (e.workout_outdoor) n++;
-  if (e.diet) n++;
-  if ((e.water_ml ?? 0) >= TASK_GOALS.WATER_ML) n++;
-  if ((e.reading_pages ?? 0) >= TASK_GOALS.READING_PAGES) n++;
-  if (e.progress_photo_url) n++;
-  return n;
-}
 
 export function TodayBanner() {
   const router = useRouter();
@@ -37,9 +24,10 @@ export function TodayBanner() {
   const shimmer = useSharedValue(-1);
   const barWidth = useSharedValue(0);
 
-  const progress = computeDayProgress(todayEntry);
-  const done = countDone(todayEntry);
-  const complete = done === 6;
+  const goals = goalsFromChallenge(challenge);
+  const progress = computeDayProgress(todayEntry, goals);
+  const { done, total } = countTasksDone(todayEntry, goals);
+  const complete = done === total;
 
   useEffect(() => {
     barWidth.value = withTiming(progress, {
@@ -95,7 +83,7 @@ export function TodayBanner() {
               >
                 {done}
               </Text>
-              <Text style={styles.countSmall}>/6</Text>
+              <Text style={styles.countSmall}>/{total}</Text>
             </Text>
           </View>
           <View style={styles.barTrack}>
