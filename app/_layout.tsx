@@ -1,77 +1,68 @@
-import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { colors } from '@/theme/colors';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '@/store/useAuth';
-import { useChallenge } from '@/store/useChallenge';
-
-function AuthGate() {
-  const booting = useAuth((s) => s.booting);
-  const session = useAuth((s) => s.session);
-  const needsOnboarding = useChallenge((s) => s.needsOnboarding);
-  const challengeLoading = useChallenge((s) => s.loading);
-  const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (booting) return;
-    const first = (Array.isArray(segments) ? segments[0] : undefined) as string | undefined;
-    const inAuth = first === '(auth)';
-    const inOnboarding = first === 'onboarding';
-    try {
-      if (!session && !inAuth) {
-        router.replace('/(auth)/login');
-      } else if (session && inAuth) {
-        router.replace('/(tabs)/feed');
-      } else if (session && needsOnboarding && !challengeLoading && !inOnboarding) {
-        router.replace('/onboarding');
-      } else if (session && !needsOnboarding && inOnboarding) {
-        router.replace('/(tabs)/feed');
-      }
-    } catch (e) {
-      console.warn('[AuthGate] nav error', e);
-    }
-  }, [booting, session, segments, router, needsOnboarding, challengeLoading]);
-
-  return null;
-}
+import { useProfile } from '@/store/useProfile';
+import { useHabits } from '@/store/useHabits';
+import { useAntiHabits } from '@/store/useAntiHabits';
+import { useRewards } from '@/store/useRewards';
+import { useWallet } from '@/store/useWallet';
+import { useMissions } from '@/store/useMissions';
+import { ToastHost } from '@/components/ToastHost';
+import { colors } from '@/theme/colors';
 
 export default function RootLayout() {
   const init = useAuth((s) => s.init);
-  const booting = useAuth((s) => s.booting);
+  const session = useAuth((s) => s.session);
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined;
-    init().then((c) => {
-      cleanup = c;
-    });
-    return () => cleanup?.();
+    init();
   }, [init]);
+
+  useEffect(() => {
+    if (session) {
+      (async () => {
+        await Promise.all([
+          useProfile.getState().fetch(),
+          useHabits.getState().fetch(),
+          useAntiHabits.getState().fetch(),
+          useRewards.getState().fetch(),
+          useWallet.getState().fetch(),
+          useMissions.getState().fetch(),
+        ]);
+        await useMissions.getState().ensureWeekly();
+      })();
+    }
+  }, [session]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <View style={{ flex: 1, backgroundColor: colors.bg }}>
-          {booting ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <ActivityIndicator color={colors.neon} />
-            </View>
-          ) : (
-            <>
-              <AuthGate />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.bg },
-                }}
-              />
-            </>
-          )}
-        </View>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.bg },
+            headerTitleStyle: { color: colors.text },
+            headerTintColor: colors.text,
+            contentStyle: { backgroundColor: colors.bg },
+            headerShadowVisible: false,
+          }}
+        >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="review" options={{ title: 'Review semanal', presentation: 'modal' }} />
+          <Stack.Screen name="habit/new" options={{ title: 'Novo hábito', presentation: 'modal' }} />
+          <Stack.Screen name="habit/[id]" options={{ title: 'Editar hábito' }} />
+          <Stack.Screen name="anti/new" options={{ title: 'Novo anti-hábito', presentation: 'modal' }} />
+          <Stack.Screen name="anti/[id]" options={{ title: 'Editar anti-hábito' }} />
+          <Stack.Screen name="reward/new" options={{ title: 'Nova recompensa', presentation: 'modal' }} />
+          <Stack.Screen name="reward/[id]" options={{ title: 'Editar recompensa' }} />
+        </Stack>
+        <ToastHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -1,21 +1,41 @@
 {
-  "name": "75Hard",
-  "short_name": "75Hard",
-  "description": "Desafio 75Hard — treinos, dieta, água, leitura e foto diária.",
+  "name": "Rotina",
+  "short_name": "Rotina",
+  "description": "Rastreador de hábitos com economia interna de coin.",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
+  "background_color": "#0B0D10",
+  "theme_color": "#0B0D10",
   "orientation": "portrait",
-  "background_color": "#0A0A0A",
-  "theme_color": "#0A0A0A",
-  "categories": ["health", "fitness", "lifestyle"],
-  "lang": "pt-BR",
   "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Hábitos de hoje",
+      "short_name": "Hoje",
+      "url": "/?source=pwa-shortcut-today"
+    },
+    {
+      "name": "Loja",
+      "short_name": "Loja",
+      "url": "/rewards?source=pwa-shortcut-rewards"
+    },
+    {
+      "name": "Stats",
+      "short_name": "Stats",
+      "url": "/stats?source=pwa-shortcut-stats"
     }
   ]
 }

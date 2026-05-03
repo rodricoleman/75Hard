@@ -1,120 +1,74 @@
-import { useEffect } from 'react';
-import { Tabs } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
-import { fonts } from '@/theme/tokens';
+import React from 'react';
+import { Tabs, Redirect } from 'expo-router';
+import { Text } from 'react-native';
 import { useAuth } from '@/store/useAuth';
-import { useChallenge } from '@/store/useChallenge';
-import { useFeedBadge } from '@/store/useFeedBadge';
+import { colors } from '@/theme/colors';
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
+function Icon({ glyph, focused }: { glyph: string; focused: boolean }) {
   return (
-    <View style={styles.iconWrap}>
-      <View style={[styles.indicator, focused && styles.indicatorOn]} />
-      <Text
-        style={[
-          styles.iconTxt,
-          { color: focused ? colors.neon : colors.textDim },
-        ]}
-      >
-        {label.toUpperCase()}
-      </Text>
-    </View>
+    <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{glyph}</Text>
   );
 }
 
 export default function TabsLayout() {
-  const userId = useAuth((s) => s.user?.id);
-  const unreadCount = useFeedBadge((s) => s.unreadCount);
-
-  useEffect(() => {
-    if (!userId) {
-      useChallenge.getState().reset();
-      useFeedBadge.getState().reset();
-      return;
-    }
-    useChallenge.getState().load();
-    useFeedBadge.getState().refresh();
-    const id = setInterval(() => {
-      useFeedBadge.getState().refresh();
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [userId]);
+  const session = useAuth((s) => s.session);
+  const loading = useAuth((s) => s.loading);
+  if (!loading && !session) return <Redirect href="/(auth)/login" />;
 
   return (
     <Tabs
-      initialRouteName="feed"
       screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 68,
-          paddingTop: 6,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 8,
         },
-        tabBarItemStyle: { paddingVertical: 4 },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textDim,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        headerStyle: { backgroundColor: colors.bg },
+        headerTitleStyle: { color: colors.text, fontWeight: '700' },
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
-        name="feed"
+        name="index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon label="Feed" focused={focused} />,
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: {
-            backgroundColor: colors.ember,
-            color: '#fff',
-            fontSize: 10,
-            fontFamily: fonts.mono,
-            fontWeight: '900',
-          },
+          title: 'Hoje',
+          headerShown: false,
+          tabBarIcon: ({ focused }) => <Icon glyph="◉" focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="index"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="Hoje" focused={focused} /> }}
+        name="habits"
+        options={{
+          title: 'Hábitos',
+          tabBarIcon: ({ focused }) => <Icon glyph="✓" focused={focused} />,
+        }}
       />
       <Tabs.Screen
-        name="ranking"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="Rank" focused={focused} /> }}
+        name="rewards"
+        options={{
+          title: 'Loja',
+          tabBarIcon: ({ focused }) => <Icon glyph="★" focused={focused} />,
+        }}
       />
       <Tabs.Screen
         name="stats"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="Stats" focused={focused} /> }}
+        options={{
+          title: 'Stats',
+          tabBarIcon: ({ focused }) => <Icon glyph="▲" focused={focused} />,
+        }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="Ajustes" focused={focused} /> }}
+        options={{
+          title: 'Ajustes',
+          tabBarIcon: ({ focused }) => <Icon glyph="⚙" focused={focused} />,
+        }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconWrap: {
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 8,
-    paddingTop: 2,
-    minWidth: 56,
-  },
-  indicator: {
-    width: 20,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: 'transparent',
-  },
-  indicatorOn: {
-    backgroundColor: colors.neon,
-    shadowColor: colors.neon,
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  iconTxt: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-});

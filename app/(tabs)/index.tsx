@@ -1,304 +1,208 @@
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, RefreshControl, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
-import { useAuth } from '@/store/useAuth';
-import { useChallenge, goalsFromChallenge } from '@/store/useChallenge';
-import { computeDayProgress, countTasksDone } from '@/lib/streak';
-import { TASK_LIMITS } from '@/types/challenge';
-import { DayRing } from '@/components/DayRing';
-import { TaskRow } from '@/components/TaskRow';
-import { CounterInput } from '@/components/CounterInput';
-import { captureProgressPhoto, uploadProgressPhoto } from '@/lib/photo';
+import { useRouter } from 'expo-router';
+import { useProfile } from '@/store/useProfile';
+import { useHabits } from '@/store/useHabits';
+import { useAntiHabits } from '@/store/useAntiHabits';
+import { useMissions } from '@/store/useMissions';
+import { CoinBadge } from '@/components/CoinBadge';
+import { XPBar } from '@/components/XPBar';
+import { HabitRow } from '@/components/HabitRow';
+import { AntiHabitRow } from '@/components/AntiHabitRow';
+import { MissionCard } from '@/components/MissionCard';
+import { SectionHeader } from '@/components/SectionHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { Card } from '@/components/Card';
 import { colors } from '@/theme/colors';
-import { type, fonts } from '@/theme/tokens';
+import { font, spacing } from '@/theme/tokens';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-export default function Home() {
-  const userId = useAuth((s) => s.user?.id);
-  const {
-    loading,
-    challenge,
-    todayEntry,
-    currentDay,
-    justReset,
-    upsertToday,
-    ackReset,
-  } = useChallenge();
+export default function Today() {
+  const router = useRouter();
+  const profile = useProfile((s) => s.profile);
+  const habits = useHabits((s) => s.habits);
+  const doneTodayMap = useHabits((s) => s.doneTodayMap);
+  const streakFor = useHabits((s) => s.streakFor);
+  const toggle = useHabits((s) => s.toggleToday);
+  const antiHabits = useAntiHabits((s) => s.antiHabits);
+  const todayCountFor = useAntiHabits((s) => s.todayCountFor);
+  const lastLogFor = useAntiHabits((s) => s.lastLogFor);
+  const logAnti = useAntiHabits((s) => s.log);
+  const unlogAnti = useAntiHabits((s) => s.unlog);
+  const mission = useMissions((s) => s.current());
+  const missionProgress = useMissions((s) => (mission ? s.progressFor(mission) : 0));
+  const claimMission = useMissions((s) => s.claim);
 
-  if (loading || !challenge) {
-    return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.center}>
-          <Text style={styles.dim}>carregando…</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  const goals = goalsFromChallenge(challenge);
-  const e = todayEntry ?? {};
-  const progress = computeDayProgress(e, goals);
-  const pct = Math.round(progress * 100);
+  const refresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      useProfile.getState().fetch(),
+      useHabits.getState().fetch(),
+      useAntiHabits.getState().fetch(),
+    ]);
+    setRefreshing(false);
+  };
 
-  const toggle = (key: 'workout_indoor' | 'workout_outdoor' | 'diet') =>
-    upsertToday({ [key]: !(e as any)[key] } as any).catch((err) =>
-      Alert.alert('Erro', err.message),
-    );
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const setWater = (v: number) =>
-    upsertToday({ water_ml: v }).catch((err) => Alert.alert('Erro', err.message));
-  const setReading = (v: number) =>
-    upsertToday({ reading_pages: v }).catch((err) => Alert.alert('Erro', err.message));
+  const doneMap = doneTodayMap();
+  const dailyHabits = habits.filter((h) => h.type === 'daily');
+  const weeklyHabits = habits.filter((h) => h.type === 'weekly');
+  const onceHabits = habits.filter((h) => h.type === 'once');
+  const doneCount = dailyHabits.filter((h) => doneMap[h.id]).length;
+  const totalDaily = dailyHabits.length;
 
-  async function onPhoto() {
-    const uri = await captureProgressPhoto();
-    if (!uri) return;
-    try {
-      const path = await uploadProgressPhoto(uri, userId!, challenge!.id, currentDay);
-      await upsertToday({ progress_photo_url: path });
-    } catch (err: any) {
-      Alert.alert('Erro ao enviar foto', err.message);
-    }
-  }
+  const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
-          <View style={styles.brandRow}>
-            <Text style={styles.brand}>
-              75<Text style={{ color: colors.neon }}>HARD</Text>
-            </Text>
-            <View style={styles.pctPill}>
-              <Text style={styles.pctPillTxt}>{pct}%</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.greet}>{today}</Text>
+        <Text style={styles.title}>
+          {totalDaily > 0
+            ? `${doneCount}/${totalDaily} hoje`
+            : 'Nenhum hábito ainda'}
+        </Text>
+
+        <Card style={styles.walletCard}>
+          <View style={styles.walletHeader}>
+            <View>
+              <Text style={styles.walletLabel}>SALDO</Text>
+              <CoinBadge amount={profile?.coin_balance ?? 0} size="lg" />
             </View>
           </View>
-          <Text style={styles.tagline}>NO COMPROMISSES · NO SUBSTITUTIONS</Text>
-        </Animated.View>
+          <View style={{ marginTop: spacing.lg }}>
+            <XPBar xp={profile?.xp ?? 0} level={profile?.level ?? 1} />
+          </View>
+        </Card>
 
-        <Animated.View entering={ZoomIn.duration(600).delay(120)} style={styles.ringWrap}>
-          <DayRing day={currentDay} total={TASK_LIMITS.TOTAL_DAYS} progress={progress} />
-        </Animated.View>
-
-        <View style={styles.sectionRow}>
-          <Text style={styles.section}>TAREFAS DO DIA</Text>
-          <View style={styles.sectionLine} />
-        </View>
-
-        <Animated.View entering={FadeIn.duration(300).delay(280)}>
-          <TaskRow
-            icon="💪"
-            label="Treino 1 · indoor"
-            hint={`${goals.workout_indoor_min} min`}
-            done={!!(e as any).workout_indoor}
-            onToggle={() => toggle('workout_indoor')}
-          />
-          <TaskRow
-            icon="🏃"
-            label="Treino 2 · outdoor"
-            hint={`${goals.workout_outdoor_min} min ao ar livre`}
-            done={!!(e as any).workout_outdoor}
-            onToggle={() => toggle('workout_outdoor')}
-          />
-          {goals.diet_enabled ? (
-            <TaskRow
-              icon="🥗"
-              label="Dieta"
-              hint="Seguir o plano · zero álcool"
-              done={!!(e as any).diet}
-              onToggle={() => toggle('diet')}
+        {mission && (
+          <View style={{ marginBottom: spacing.lg }}>
+            <MissionCard
+              mission={mission}
+              progress={missionProgress}
+              onClaim={async () => {
+                const { error } = await claimMission(mission.id);
+                if (error) console.warn(error);
+              }}
             />
-          ) : null}
-          <TaskRow
-            icon="💧"
-            label="Água"
-            hint={`${((e as any).water_ml ?? 0).toLocaleString()} / ${goals.water_ml_goal.toLocaleString()} ml`}
-            done={((e as any).water_ml ?? 0) >= goals.water_ml_goal}
-            onToggle={() =>
-              setWater(
-                ((e as any).water_ml ?? 0) >= goals.water_ml_goal ? 0 : goals.water_ml_goal,
-              )
-            }
-            right={
-              <CounterInput
-                value={(e as any).water_ml ?? 0}
-                step={250}
-                goal={goals.water_ml_goal}
-                suffix="ml"
-                onChange={setWater}
-              />
-            }
-          />
-          <TaskRow
-            icon="📖"
-            label="Leitura"
-            hint={`${(e as any).reading_pages ?? 0} / ${goals.reading_pages_goal} páginas`}
-            done={((e as any).reading_pages ?? 0) >= goals.reading_pages_goal}
-            onToggle={() =>
-              setReading(
-                ((e as any).reading_pages ?? 0) >= goals.reading_pages_goal
-                  ? 0
-                  : goals.reading_pages_goal,
-              )
-            }
-            right={
-              <CounterInput
-                value={(e as any).reading_pages ?? 0}
-                step={1}
-                goal={goals.reading_pages_goal}
-                onChange={setReading}
-              />
-            }
-          />
-          <TaskRow
-            icon="📸"
-            label="Foto de progresso"
-            hint={(e as any).progress_photo_url ? 'Enviada ✓' : 'Capturar hoje'}
-            done={!!(e as any).progress_photo_url}
-            onToggle={onPhoto}
-          />
-        </Animated.View>
+          </View>
+        )}
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+        {dailyHabits.length === 0 && weeklyHabits.length === 0 && onceHabits.length === 0 ? (
+          <EmptyState
+            emoji="🌱"
+            title="Comece pelos hábitos"
+            body="Crie seu primeiro hábito e ganhe coin cada vez que cumprir."
+            actionLabel="Criar hábito"
+            onAction={() => router.push('/habit/new' as any)}
+          />
+        ) : (
+          <>
+            {dailyHabits.length > 0 && (
+              <>
+                <SectionHeader title="Diários" />
+                {dailyHabits.map((h) => (
+                  <HabitRow
+                    key={h.id}
+                    habit={h}
+                    done={!!doneMap[h.id]}
+                    streak={streakFor(h.id)}
+                    onToggle={() => toggle(h.id)}
+                  />
+                ))}
+              </>
+            )}
 
-      <Modal visible={!!justReset} transparent animationType="fade">
-        <Animated.View entering={FadeIn.duration(250)} style={styles.modalBg}>
-          <Animated.View
-            entering={ZoomIn.springify().damping(16).stiffness(180)}
-            style={styles.modal}
-          >
-            <View style={styles.modalStamp}>
-              <Text style={styles.modalStampTxt}>RESET</Text>
-            </View>
-            <Text style={styles.modalTitle}>VOCÊ FALHOU NO DIA {justReset?.failedDay}</Text>
-            <Text style={styles.modalText}>
-              O desafio reiniciou no Dia 1. Disciplina não aceita meio-termo — recomece com mais
-              foco.
+            {weeklyHabits.length > 0 && (
+              <>
+                <SectionHeader title="Semanais" />
+                {weeklyHabits.map((h) => (
+                  <HabitRow
+                    key={h.id}
+                    habit={h}
+                    done={!!doneMap[h.id]}
+                    streak={streakFor(h.id)}
+                    onToggle={() => toggle(h.id)}
+                  />
+                ))}
+              </>
+            )}
+
+            {onceHabits.length > 0 && (
+              <>
+                <SectionHeader title="Pontuais" />
+                {onceHabits.map((h) => (
+                  <HabitRow
+                    key={h.id}
+                    habit={h}
+                    done={!!doneMap[h.id]}
+                    streak={streakFor(h.id)}
+                    onToggle={() => toggle(h.id)}
+                  />
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {antiHabits.length > 0 && (
+          <>
+            <SectionHeader title="Anti-hábitos" />
+            <Text style={styles.antiHint}>
+              Toque pra registrar uma slip — você perde coin.
             </Text>
-            <Pressable style={styles.modalBtn} onPress={ackReset}>
-              <Text style={styles.modalBtnText}>RECOMEÇAR</Text>
-            </Pressable>
-          </Animated.View>
-        </Animated.View>
-      </Modal>
+            {antiHabits.map((a) => {
+              const last = lastLogFor(a.id);
+              return (
+                <AntiHabitRow
+                  key={a.id}
+                  antiHabit={a}
+                  todayCount={todayCountFor(a.id)}
+                  lastLog={last}
+                  onLog={() => logAnti(a.id)}
+                  onUndo={() => last && unlogAnti(last.id)}
+                />
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-    maxWidth: 520,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  dim: { color: colors.textMuted, fontFamily: fonts.mono, letterSpacing: 2 },
-  header: { marginBottom: 8 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { ...type.h1, fontSize: 34, color: colors.text, letterSpacing: -1.5 },
-  pctPill: {
-    backgroundColor: colors.neon,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  pctPillTxt: {
-    fontFamily: fonts.mono,
-    color: '#000',
-    fontWeight: '900',
-    fontSize: 13,
-    letterSpacing: -0.3,
-  },
-  tagline: {
-    ...type.eyebrow,
-    color: colors.textDim,
-    marginTop: 6,
-    fontSize: 9,
-  },
-  ringWrap: { alignItems: 'center', marginVertical: 20 },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 12,
-    marginBottom: 14,
-  },
-  section: {
-    ...type.label,
-    color: colors.textMuted,
-  },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  modalBg: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.88)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modal: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    borderRadius: 18,
-    padding: 24,
-    width: '100%',
-    maxWidth: 380,
-    gap: 12,
-  },
-  modalStamp: {
-    alignSelf: 'flex-start',
-    borderWidth: 2,
-    borderColor: colors.danger,
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    transform: [{ rotate: '-3deg' }],
-    marginBottom: 4,
-  },
-  modalStampTxt: {
-    color: colors.danger,
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 3,
-  },
-  modalTitle: {
-    ...type.h2,
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
+  greet: { color: colors.textMuted, fontSize: font.size.sm, textTransform: 'capitalize' },
+  title: {
     color: colors.text,
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  modalText: {
-    ...type.body,
-    color: colors.textMuted,
-    lineHeight: 22,
-  },
-  modalBtn: {
-    marginTop: 12,
-    backgroundColor: colors.neon,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalBtnText: {
-    color: '#000',
+    fontSize: font.size.title,
     fontWeight: '900',
-    letterSpacing: 2,
-    fontSize: 13,
+    letterSpacing: -1,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
   },
+  walletCard: { marginBottom: spacing.lg },
+  walletHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  walletLabel: {
+    color: colors.textDim,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  antiHint: { color: colors.textDim, fontSize: font.size.xs, marginBottom: spacing.sm },
 });

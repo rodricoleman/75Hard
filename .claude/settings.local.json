@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_tables",
+      "Bash(npx --yes create-expo-app@latest . --template blank-typescript --no-install)",
+      "Bash(npx --yes create-expo-app@latest . --template blank-typescript --no-install --name app-75hard)",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__get_publishable_keys",
+      "Bash(node scripts/gen-assets.js)",
+      "Bash(npx expo *)",
+      "Bash(npx --yes vercel@latest whoami)",
+      "Bash(npx --yes vercel@latest link --yes --project app-75hard)",
+      "Bash(npx --yes vercel@latest env add EXPO_PUBLIC_SUPABASE_URL production)",
+      "Bash(npx --yes vercel@latest env add EXPO_PUBLIC_SUPABASE_ANON_KEY production)",
+      "Bash(npx --yes vercel@latest --prod --yes)",
+      "Bash(gh pr create --base main --head feature/auth-social-feed --title 'Multi-user auth + social feed + ranking' --body ' *)",
+      "mcp__claude_ai_Supabase__list_migrations",
+      "Bash(ls .vercel/)",
+      "Bash(cat .vercel/project.json)",
+      "Bash(npx vercel *)",
+      "Bash(grep -v \"^$\")"
+    ]
+  }
+}

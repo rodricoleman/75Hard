@@ -1,7 +1,8 @@
+import React from 'react';
 import { ScrollViewStyleReset } from 'expo-router/html';
-import { type PropsWithChildren } from 'react';
 
-export default function Root({ children }: PropsWithChildren) {
+// Wrapper of the root HTML in web. Adds PWA manifest + theme color.
+export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <head>
@@ -9,34 +10,24 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#0A0A0A" />
+        <meta name="theme-color" content="#0B0D10" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="75Hard" />
-        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Rotina" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="icon" href="/icon.png" />
-        <link rel="apple-touch-icon" href="/icon.png" />
-        <title>75Hard</title>
-
         <ScrollViewStyleReset />
-
-        <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
+        <style dangerouslySetInnerHTML={{ __html: bg }} />
       </head>
       <body>{children}</body>
     </html>
   );
 }
 
-const responsiveBackground = `
-html, body { background-color: #0A0A0A; }
-body {
-  overscroll-behavior-y: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-* { -webkit-user-select: none; user-select: none; }
-input, textarea { -webkit-user-select: text; user-select: text; }
+const bg = `
+  body { background-color: #0B0D10; }
+  @media (prefers-color-scheme: dark) {
+    body { background-color: #0B0D10; }
+  }
 `;

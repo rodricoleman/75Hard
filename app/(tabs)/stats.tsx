@@ -1,321 +1,219 @@
-import { useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { useChallenge, goalsFromChallenge } from '@/store/useChallenge';
-import { TASK_LIMITS } from '@/types/challenge';
-import { computeDayProgress } from '@/lib/streak';
+import React from 'react';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Screen } from '@/components/Screen';
+import { Card } from '@/components/Card';
+import { StatTile } from '@/components/StatTile';
+import { CoinBadge } from '@/components/CoinBadge';
+import { XPBar } from '@/components/XPBar';
+import { Button } from '@/components/Button';
+import { Sparkline } from '@/components/Sparkline';
+import { useProfile } from '@/store/useProfile';
+import { useHabits } from '@/store/useHabits';
+import { useAntiHabits } from '@/store/useAntiHabits';
+import { useRewards } from '@/store/useRewards';
+import { useWallet } from '@/store/useWallet';
 import { colors } from '@/theme/colors';
-import { type, fonts } from '@/theme/tokens';
+import { font, radius, spacing } from '@/theme/tokens';
+import { lastNDays, prettyDate } from '@/lib/dates';
+import { format, parseISO } from 'date-fns';
 
 export default function Stats() {
-  const { challenge, entries, currentDay, load } = useChallenge();
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const profile = useProfile((s) => s.profile);
+  const habits = useHabits((s) => s.habits);
+  const completions = useHabits((s) => s.completions);
+  const streakFor = useHabits((s) => s.streakFor);
+  const antiLogs = useAntiHabits((s) => s.logs);
+  const redemptions = useRewards((s) => s.redemptions);
+  const wallet = useWallet((s) => s.entries);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const days30 = lastNDays(30);
+  const totalEarned30 = completions
+    .filter((c) => days30.includes(c.date))
+    .reduce((s, c) => s + c.coin_earned, 0);
+  const totalLost30 = antiLogs
+    .filter((l) => days30.includes(l.date))
+    .reduce((s, l) => s + l.coin_lost, 0);
+  const totalSpent30 = redemptions
+    .filter((r) => days30.includes(r.redeemed_at.slice(0, 10)))
+    .reduce((s, r) => s + r.coin_spent, 0);
 
-  const goals = useMemo(() => goalsFromChallenge(challenge), [challenge]);
-  const byDay = useMemo(() => new Map(entries.map((e) => [e.day_number, e])), [entries]);
+  const last7 = lastNDays(7);
+  const dailyHabits = habits.filter((h) => h.type === 'daily');
+  const heatmap = last7.map((d) => {
+    const done = completions.filter((c) => c.date === d).length;
+    return { date: d, done, total: dailyHabits.length };
+  });
 
-  const completedDays = useMemo(
-    () => entries.filter((e) => e.completed).length,
-    [entries],
-  );
+  const bestStreak = habits.reduce((best, h) => Math.max(best, streakFor(h.id)), 0);
 
-  const streak = useMemo(() => {
-    let s = 0;
-    for (let d = currentDay; d >= 1; d--) {
-      const e = byDay.get(d);
-      if (e?.completed) s++;
-      else if (d !== currentDay) break;
-    }
-    return s;
-  }, [byDay, currentDay]);
+  // Running balance from wallet entries (chronological)
+  const balanceSeries = (() => {
+    const sorted = [...wallet].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    let bal = 0;
+    return sorted.map((e) => {
+      bal += e.delta_coin;
+      return bal;
+    });
+  })();
 
-  const remaining = TASK_LIMITS.TOTAL_DAYS - currentDay + 1;
-  const pctDone = Math.round((completedDays / TASK_LIMITS.TOTAL_DAYS) * 100);
-
-  // Build 7-column grid (11 rows x 7 cols = 77 slots; use first 75)
-  const weeks: Array<Array<number>> = [];
-  for (let i = 0; i < TASK_LIMITS.TOTAL_DAYS; i += 7) {
-    weeks.push(
-      Array.from({ length: 7 }, (_, k) => i + k + 1).filter(
-        (d) => d <= TASK_LIMITS.TOTAL_DAYS,
-      ),
-    );
-  }
+  const recent = wallet.slice(0, 30);
+  const sparkW = Math.max(240, Math.min(width - 80, 480));
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(320)}>
-          <Text style={styles.eyebrow}>BALANÇO</Text>
-          <Text style={styles.h1}>PROGRESSO</Text>
-        </Animated.View>
+    <Screen>
+      <Text style={styles.h1}>Stats</Text>
 
-        <Animated.View entering={FadeIn.duration(400).delay(100)} style={styles.hero}>
-          <View style={styles.heroMain}>
-            <Text style={styles.heroBigLabel}>STREAK ATUAL</Text>
-            <View style={styles.streakRow}>
-              <Text style={styles.streakNum}>{streak}</Text>
-              <Text style={styles.streakFlame}>🔥</Text>
+      <Card style={{ marginTop: spacing.md }}>
+        <Text style={styles.label}>NÍVEL & XP</Text>
+        <XPBar xp={profile?.xp ?? 0} level={profile?.level ?? 1} />
+        <View style={{ marginTop: spacing.lg }}>
+          <Text style={styles.label}>SALDO</Text>
+          <CoinBadge amount={profile?.coin_balance ?? 0} size="lg" />
+          {balanceSeries.length >= 2 && (
+            <View style={{ marginTop: spacing.md, alignItems: 'center' }}>
+              <Sparkline values={balanceSeries} width={sparkW} height={70} />
+              <Text style={styles.sparkCaption}>Saldo ao longo do tempo</Text>
             </View>
-            <Text style={styles.heroSub}>
-              {streak === 0 ? 'comece hoje' : streak === 1 ? '1 dia consecutivo' : `${streak} dias consecutivos`}
-            </Text>
-          </View>
-          <View style={styles.heroDivider} />
-          <View style={styles.heroSide}>
-            <View style={styles.heroMini}>
-              <Text style={styles.heroMiniLabel}>COMPLETOS</Text>
-              <Text style={styles.heroMiniValue}>
-                {completedDays}
-                <Text style={styles.heroMiniSuffix}>/{TASK_LIMITS.TOTAL_DAYS}</Text>
-              </Text>
-            </View>
-            <View style={styles.heroMini}>
-              <Text style={styles.heroMiniLabel}>RESTAM</Text>
-              <Text style={styles.heroMiniValue}>{remaining}</Text>
-            </View>
-            <View style={styles.heroMini}>
-              <Text style={styles.heroMiniLabel}>TAXA</Text>
-              <Text style={styles.heroMiniValue}>
-                {pctDone}
-                <Text style={styles.heroMiniSuffix}>%</Text>
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
-
-        <View style={styles.sectionRow}>
-          <Text style={styles.section}>CALENDÁRIO · 75 DIAS</Text>
-          <View style={styles.sectionLine} />
+          )}
         </View>
+      </Card>
 
-        <Animated.View entering={FadeIn.duration(400).delay(180)}>
-          <View style={styles.grid}>
-            {weeks.map((week, wi) => (
-              <View key={wi} style={styles.weekRow}>
-                <Text style={styles.weekNum}>W{String(wi + 1).padStart(2, '0')}</Text>
-                <View style={styles.weekCells}>
-                  {week.map((day) => {
-                    const e = byDay.get(day);
-                    const isToday = day === currentDay;
-                    const isFuture = day > currentDay;
-                    const progress = e ? computeDayProgress(e as any, goals) : 0;
-                    return (
-                      <View
-                        key={day}
-                        style={[
-                          styles.cell,
-                          isFuture && styles.cellFuture,
-                          !isFuture && !e?.completed && styles.cellMiss,
-                          !!e && !e.completed && progress > 0 && styles.cellPartial,
-                          e?.completed && styles.cellDone,
-                          isToday && styles.cellToday,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.cellText,
-                            e?.completed && { color: '#000' },
-                            isFuture && { color: colors.textDim },
-                          ]}
-                        >
-                          {day}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                  {Array.from({ length: 7 - week.length }).map((_, i) => (
-                    <View key={`fill-${i}`} style={[styles.cell, styles.cellFill]} />
-                  ))}
-                </View>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-
-        <View style={styles.legend}>
-          <LegendDot color={colors.neon} label="completo" />
-          <LegendDot color={colors.neonDim} label="parcial" />
-          <LegendDot color={colors.dangerSoft} borderColor={colors.danger} label="falhou" />
-          <LegendDot color={colors.surfaceAlt} label="futuro" />
-        </View>
-
-        {challenge && (
-          <View style={styles.footerCard}>
-            <Text style={styles.footerLabel}>INICIADO EM</Text>
-            <Text style={styles.footerValue}>{challenge.started_at}</Text>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function LegendDot({
-  color,
-  label,
-  borderColor,
-}: {
-  color: string;
-  label: string;
-  borderColor?: string;
-}) {
-  return (
-    <View style={styles.legendItem}>
-      <View
-        style={[
-          styles.legendSwatch,
-          { backgroundColor: color },
-          borderColor ? { borderColor, borderWidth: 1 } : null,
-        ]}
+      <Button
+        label="Review semanal"
+        variant="subtle"
+        onPress={() => router.push('/review' as any)}
+        style={{ marginTop: spacing.md }}
       />
-      <Text style={styles.legendLabel}>{label}</Text>
-    </View>
+
+      <Text style={styles.section}>Últimos 30 dias</Text>
+      <View style={styles.row}>
+        <StatTile label="GANHO" value={`+${totalEarned30}`} accent={colors.coin} />
+        <StatTile label="PERDIDO" value={`-${totalLost30}`} accent={colors.danger} />
+      </View>
+      <View style={[styles.row, { marginTop: spacing.sm }]}>
+        <StatTile label="GASTO" value={`-${totalSpent30}`} accent={colors.accent} />
+        <StatTile label="MELHOR STREAK" value={`${bestStreak}d`} accent={colors.warn} />
+      </View>
+
+      <Text style={styles.section}>Última semana</Text>
+      <Card>
+        <View style={styles.heatRow}>
+          {heatmap.map((d) => {
+            const pct = d.total > 0 ? d.done / d.total : 0;
+            return (
+              <View key={d.date} style={styles.heatCol}>
+                <View
+                  style={[
+                    styles.heatCell,
+                    {
+                      backgroundColor:
+                        pct === 1 ? colors.success : pct >= 0.5 ? colors.primary : pct > 0 ? colors.warn : colors.surfaceAlt,
+                    },
+                  ]}
+                />
+                <Text style={styles.heatLabel}>{prettyDate(d.date)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </Card>
+
+      <Text style={styles.section}>Streaks por hábito</Text>
+      {habits.length === 0 ? (
+        <Card>
+          <Text style={{ color: colors.textMuted, fontSize: font.size.sm }}>Sem hábitos ainda.</Text>
+        </Card>
+      ) : (
+        habits.map((h) => (
+          <View key={h.id} style={styles.streakRow}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: h.color ?? colors.border },
+              ]}
+            />
+            <Text style={styles.streakTitle}>
+              {h.emoji ? `${h.emoji}  ` : ''}
+              {h.title}
+            </Text>
+            <Text style={styles.streakNum}>🔥 {streakFor(h.id)}d</Text>
+          </View>
+        ))
+      )}
+
+      <Text style={styles.section}>Histórico (últimas 30 transações)</Text>
+      {recent.length === 0 ? (
+        <Card>
+          <Text style={{ color: colors.textMuted, fontSize: font.size.sm }}>Sem movimentações.</Text>
+        </Card>
+      ) : (
+        <Card>
+          {recent.map((e, i) => (
+            <View
+              key={e.id}
+              style={[
+                styles.txnRow,
+                i < recent.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.txnReason}>{e.reason}</Text>
+                <Text style={styles.txnDate}>
+                  {format(parseISO(e.created_at), 'dd/MM HH:mm')}
+                </Text>
+              </View>
+              {e.delta_coin !== 0 && <CoinBadge amount={e.delta_coin} size="sm" sign />}
+              {e.delta_xp !== 0 && (
+                <Text style={[styles.xpDelta, { color: e.delta_xp > 0 ? colors.xp : colors.danger }]}>
+                  {e.delta_xp > 0 ? '+' : ''}
+                  {e.delta_xp} XP
+                </Text>
+              )}
+            </View>
+          ))}
+        </Card>
+      )}
+    </Screen>
   );
 }
-
-const CELL_SIZE = 32;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  container: {
-    padding: 20,
-    paddingBottom: 60,
-    maxWidth: 520,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  eyebrow: { ...type.eyebrow, color: colors.neon, marginBottom: 4 },
-  h1: { ...type.h1, color: colors.text, fontSize: 34, marginBottom: 24 },
-
-  hero: {
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 20,
-    marginBottom: 28,
-  },
-  heroMain: { marginBottom: 4 },
-  heroBigLabel: { ...type.label, color: colors.textMuted },
-  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
-  streakNum: {
-    fontFamily: fonts.mono,
-    color: colors.neon,
-    fontSize: 72,
-    fontWeight: '900',
-    letterSpacing: -4,
-    lineHeight: 74,
-  },
-  streakFlame: { fontSize: 36, marginBottom: 12 },
-  heroSub: { ...type.caption, color: colors.textMuted, marginTop: -2 },
-  heroDivider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
-  heroSide: { flexDirection: 'row', gap: 10 },
-  heroMini: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  heroMiniLabel: {
-    ...type.eyebrow,
-    color: colors.textDim,
-    fontSize: 9,
-  },
-  heroMiniValue: {
-    fontFamily: fonts.mono,
+  h1: { color: colors.text, fontSize: font.size.title, fontWeight: '900', letterSpacing: -1 },
+  label: { color: colors.textDim, fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: spacing.xs },
+  section: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -1,
-    marginTop: 4,
-  },
-  heroMiniSuffix: {
-    fontFamily: fonts.mono,
-    color: colors.textDim,
-    fontSize: 12,
+    fontSize: font.size.lg,
     fontWeight: '700',
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
-
-  sectionRow: {
+  row: { flexDirection: 'row', gap: spacing.sm },
+  heatRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  heatCol: { alignItems: 'center', gap: 4, flex: 1 },
+  heatCell: { width: '70%', aspectRatio: 1, borderRadius: radius.sm },
+  heatLabel: { color: colors.textDim, fontSize: 10 },
+  streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  section: { ...type.label, color: colors.textMuted },
-  sectionLine: { flex: 1, height: 1, backgroundColor: colors.border },
-
-  grid: { gap: 6 },
-  weekRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  weekNum: {
-    width: 34,
-    fontFamily: fonts.mono,
-    color: colors.textDim,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  weekCells: { flexDirection: 'row', gap: 6, flex: 1 },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  cellDone: { backgroundColor: colors.neon },
-  cellPartial: { backgroundColor: colors.neonDim },
-  cellMiss: { backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger },
-  cellFuture: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  cellFill: { opacity: 0 },
-  cellToday: {
-    borderColor: colors.text,
-    borderWidth: 2,
-  },
-  cellText: {
-    fontFamily: fonts.mono,
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-
-  legend: {
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  streakTitle: { color: colors.text, fontSize: font.size.md, flex: 1 },
+  streakNum: { color: colors.warn, fontWeight: '700', fontSize: font.size.md },
+  txnRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    marginTop: 18,
-    paddingHorizontal: 4,
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendSwatch: { width: 10, height: 10, borderRadius: 3 },
-  legendLabel: {
-    ...type.caption,
-    color: colors.textMuted,
-    fontSize: 11,
-    textTransform: 'lowercase',
-  },
-  footerCard: {
-    marginTop: 28,
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  footerLabel: { ...type.eyebrow, color: colors.textDim, fontSize: 9 },
-  footerValue: {
-    fontFamily: fonts.mono,
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 4,
-  },
+  txnReason: { color: colors.text, fontSize: font.size.sm, fontWeight: '500' },
+  txnDate: { color: colors.textDim, fontSize: font.size.xs, marginTop: 2 },
+  xpDelta: { fontSize: font.size.xs, fontWeight: '700' },
+  sparkCaption: { color: colors.textDim, fontSize: font.size.xs, marginTop: 4 },
 });
