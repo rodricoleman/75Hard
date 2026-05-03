@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from './Button';
 import { colors } from '@/theme/colors';
-import { font, spacing } from '@/theme/tokens';
+import { font, fontFamily, spacing } from '@/theme/tokens';
 
 export function EmptyState({
   emoji,
@@ -19,7 +19,9 @@ export function EmptyState({
 }) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.emoji}>{emoji}</Text>
+      <View style={styles.bubble}>
+        <Text style={styles.emoji}>{emoji}</Text>
+      </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.body}>{body}</Text>
       {actionLabel && onAction && (
@@ -30,18 +32,31 @@ export function EmptyState({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', paddingVertical: spacing.xxl },
-  emoji: { fontSize: 48, marginBottom: spacing.md },
+  wrap: { alignItems: 'center', paddingVertical: spacing.xl },
+  bubble: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emoji: { fontSize: 40 },
   title: {
     color: colors.text,
     fontSize: font.size.lg,
-    fontWeight: font.weight.bold,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
     marginBottom: spacing.sm,
+    letterSpacing: -0.2,
   },
   body: {
     color: colors.textMuted,
     fontSize: font.size.sm,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
+    fontFamily: fontFamily.body as any,
+    lineHeight: 20,
   },
 });

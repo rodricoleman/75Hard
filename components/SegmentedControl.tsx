@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, Text, StyleSheet } from 'react-native';
 import { colors } from '@/theme/colors';
-import { font, radius, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing } from '@/theme/tokens';
 
 export function SegmentedControl<T extends string>({
   options,
@@ -22,13 +22,16 @@ export function SegmentedControl<T extends string>({
             onPress={() => onChange(o.value)}
             style={[
               styles.seg,
-              { backgroundColor: active ? colors.primary : 'transparent' },
+              active && { backgroundColor: colors.surface },
             ]}
           >
             <Text
               style={[
                 styles.segText,
-                { color: active ? '#0B0D10' : colors.textMuted, fontWeight: active ? '700' : '500' },
+                {
+                  color: active ? colors.text : colors.textMuted,
+                  fontWeight: active ? '700' : '500',
+                },
               ]}
             >
               {o.label}
@@ -43,18 +46,20 @@ export function SegmentedControl<T extends string>({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
     padding: 4,
     gap: 4,
   },
   seg: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
     alignItems: 'center',
-    borderRadius: radius.sm,
+    borderRadius: radius.pill,
   },
-  segText: { fontSize: font.size.sm },
+  segText: {
+    fontSize: font.size.sm,
+    fontFamily: fontFamily.body as any,
+    letterSpacing: 0.2,
+  },
 });

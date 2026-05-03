@@ -40,14 +40,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.bg },
-            headerTitleStyle: { color: colors.text },
+            headerTitleStyle: { color: colors.text, fontWeight: '700' },
             headerTintColor: colors.text,
             contentStyle: { backgroundColor: colors.bg },
             headerShadowVisible: false,
+            headerBackTitle: '',
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />

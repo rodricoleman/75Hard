@@ -14,7 +14,7 @@ import { useAntiHabits } from '@/store/useAntiHabits';
 import { useRewards } from '@/store/useRewards';
 import { useWallet } from '@/store/useWallet';
 import { colors } from '@/theme/colors';
-import { font, radius, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing, softShadowSm } from '@/theme/tokens';
 import { lastNDays, prettyDate } from '@/lib/dates';
 import { format, parseISO } from 'date-fns';
 
@@ -49,7 +49,6 @@ export default function Stats() {
 
   const bestStreak = habits.reduce((best, h) => Math.max(best, streakFor(h.id)), 0);
 
-  // Running balance from wallet entries (chronological)
   const balanceSeries = (() => {
     const sorted = [...wallet].sort((a, b) => a.created_at.localeCompare(b.created_at));
     let bal = 0;
@@ -60,13 +59,14 @@ export default function Stats() {
   })();
 
   const recent = wallet.slice(0, 30);
-  const sparkW = Math.max(240, Math.min(width - 80, 480));
+  const sparkW = Math.max(240, Math.min(width - 80, 460));
 
   return (
     <Screen>
-      <Text style={styles.h1}>Stats</Text>
+      <Text style={styles.h1}>Stats ✦</Text>
 
-      <Card style={{ marginTop: spacing.md }}>
+      <View style={[styles.heroCard, softShadowSm]}>
+        <View style={styles.heroDecor} />
         <Text style={styles.label}>NÍVEL & XP</Text>
         <XPBar xp={profile?.xp ?? 0} level={profile?.level ?? 1} />
         <View style={{ marginTop: spacing.lg }}>
@@ -75,14 +75,15 @@ export default function Stats() {
           {balanceSeries.length >= 2 && (
             <View style={{ marginTop: spacing.md, alignItems: 'center' }}>
               <Sparkline values={balanceSeries} width={sparkW} height={70} />
-              <Text style={styles.sparkCaption}>Saldo ao longo do tempo</Text>
+              <Text style={styles.sparkCaption}>saldo ao longo do tempo ✿</Text>
             </View>
           )}
         </View>
-      </Card>
+      </View>
 
       <Button
         label="Review semanal"
+        icon="✦"
         variant="subtle"
         onPress={() => router.push('/review' as any)}
         style={{ marginTop: spacing.md }}
@@ -90,12 +91,12 @@ export default function Stats() {
 
       <Text style={styles.section}>Últimos 30 dias</Text>
       <View style={styles.row}>
-        <StatTile label="GANHO" value={`+${totalEarned30}`} accent={colors.coin} />
-        <StatTile label="PERDIDO" value={`-${totalLost30}`} accent={colors.danger} />
+        <StatTile label="GANHO" value={`+${totalEarned30}`} accent={colors.coin} emoji="✿" />
+        <StatTile label="PERDIDO" value={`-${totalLost30}`} accent={colors.danger} emoji="⚠" />
       </View>
-      <View style={[styles.row, { marginTop: spacing.sm }]}>
-        <StatTile label="GASTO" value={`-${totalSpent30}`} accent={colors.accent} />
-        <StatTile label="MELHOR STREAK" value={`${bestStreak}d`} accent={colors.warn} />
+      <View style={[styles.row, { marginTop: spacing.sm + 2 }]}>
+        <StatTile label="GASTO" value={`-${totalSpent30}`} accent={colors.accent} emoji="♡" />
+        <StatTile label="STREAK" value={`${bestStreak}d`} accent={colors.warn} emoji="🔥" />
       </View>
 
       <Text style={styles.section}>Última semana</Text>
@@ -110,7 +111,13 @@ export default function Stats() {
                     styles.heatCell,
                     {
                       backgroundColor:
-                        pct === 1 ? colors.success : pct >= 0.5 ? colors.primary : pct > 0 ? colors.warn : colors.surfaceAlt,
+                        pct === 1
+                          ? colors.accent
+                          : pct >= 0.5
+                          ? colors.primary
+                          : pct > 0
+                          ? colors.warn
+                          : colors.surfaceMuted,
                     },
                   ]}
                 />
@@ -124,39 +131,46 @@ export default function Stats() {
       <Text style={styles.section}>Streaks por hábito</Text>
       {habits.length === 0 ? (
         <Card>
-          <Text style={{ color: colors.textMuted, fontSize: font.size.sm }}>Sem hábitos ainda.</Text>
+          <Text style={{ color: colors.textMuted, fontSize: font.size.sm, fontFamily: fontFamily.body as any }}>
+            Sem hábitos ainda.
+          </Text>
         </Card>
       ) : (
-        habits.map((h) => (
-          <View key={h.id} style={styles.streakRow}>
+        <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
+          {habits.map((h, i) => (
             <View
+              key={h.id}
               style={[
-                styles.dot,
-                { backgroundColor: h.color ?? colors.border },
+                styles.streakRow,
+                i < habits.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderSoft },
               ]}
-            />
-            <Text style={styles.streakTitle}>
-              {h.emoji ? `${h.emoji}  ` : ''}
-              {h.title}
-            </Text>
-            <Text style={styles.streakNum}>🔥 {streakFor(h.id)}d</Text>
-          </View>
-        ))
+            >
+              <View style={[styles.dot, { backgroundColor: h.color ?? colors.primary }]} />
+              <Text style={styles.streakTitle}>
+                {h.emoji ? `${h.emoji}  ` : ''}
+                {h.title}
+              </Text>
+              <Text style={styles.streakNum}>🔥 {streakFor(h.id)}d</Text>
+            </View>
+          ))}
+        </Card>
       )}
 
-      <Text style={styles.section}>Histórico (últimas 30 transações)</Text>
+      <Text style={styles.section}>Histórico</Text>
       {recent.length === 0 ? (
         <Card>
-          <Text style={{ color: colors.textMuted, fontSize: font.size.sm }}>Sem movimentações.</Text>
+          <Text style={{ color: colors.textMuted, fontSize: font.size.sm, fontFamily: fontFamily.body as any }}>
+            Sem movimentações.
+          </Text>
         </Card>
       ) : (
-        <Card>
+        <Card padded={false} style={{ paddingHorizontal: spacing.lg }}>
           {recent.map((e, i) => (
             <View
               key={e.id}
               style={[
                 styles.txnRow,
-                i < recent.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                i < recent.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.borderSoft },
               ]}
             >
               <View style={{ flex: 1 }}>
@@ -181,39 +195,104 @@ export default function Stats() {
 }
 
 const styles = StyleSheet.create({
-  h1: { color: colors.text, fontSize: font.size.title, fontWeight: '900', letterSpacing: -1 },
-  label: { color: colors.textDim, fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: spacing.xs },
+  h1: {
+    color: colors.text,
+    fontSize: font.size.title,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -1,
+  },
+  heroCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  heroDecor: {
+    position: 'absolute',
+    top: -40,
+    right: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: colors.xpSoft,
+    opacity: 0.5,
+  },
+  label: {
+    color: colors.textDim,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: spacing.xs + 2,
+    fontFamily: fontFamily.body as any,
+  },
   section: {
     color: colors.text,
     fontSize: font.size.lg,
     fontWeight: '700',
     marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.sm + 2,
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -0.2,
   },
-  row: { flexDirection: 'row', gap: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm + 2 },
   heatRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  heatCol: { alignItems: 'center', gap: 4, flex: 1 },
-  heatCell: { width: '70%', aspectRatio: 1, borderRadius: radius.sm },
-  heatLabel: { color: colors.textDim, fontSize: 10 },
+  heatCol: { alignItems: 'center', gap: 6, flex: 1 },
+  heatCell: {
+    width: '70%',
+    aspectRatio: 1,
+    borderRadius: radius.md,
+  },
+  heatLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontFamily: fontFamily.body as any,
+  },
   streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  streakTitle: { color: colors.text, fontSize: font.size.md, flex: 1 },
-  streakNum: { color: colors.warn, fontWeight: '700', fontSize: font.size.md },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  streakTitle: {
+    color: colors.text,
+    fontSize: font.size.md,
+    flex: 1,
+    fontFamily: fontFamily.body as any,
+  },
+  streakNum: {
+    color: '#9A6300',
+    fontWeight: '700',
+    fontSize: font.size.md,
+    fontFamily: fontFamily.body as any,
+  },
   txnRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
   },
-  txnReason: { color: colors.text, fontSize: font.size.sm, fontWeight: '500' },
-  txnDate: { color: colors.textDim, fontSize: font.size.xs, marginTop: 2 },
-  xpDelta: { fontSize: font.size.xs, fontWeight: '700' },
-  sparkCaption: { color: colors.textDim, fontSize: font.size.xs, marginTop: 4 },
+  txnReason: {
+    color: colors.text,
+    fontSize: font.size.sm,
+    fontWeight: '500',
+    fontFamily: fontFamily.body as any,
+  },
+  txnDate: {
+    color: colors.textDim,
+    fontSize: font.size.xs,
+    marginTop: 2,
+    fontFamily: fontFamily.body as any,
+  },
+  xpDelta: { fontSize: font.size.xs, fontWeight: '700', fontFamily: fontFamily.body as any },
+  sparkCaption: {
+    color: colors.textDim,
+    fontSize: font.size.xs,
+    marginTop: 4,
+    fontFamily: fontFamily.body as any,
+  },
 });

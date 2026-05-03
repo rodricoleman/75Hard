@@ -4,7 +4,7 @@ import { Input } from './Input';
 import { Button } from './Button';
 import { SegmentedControl } from './SegmentedControl';
 import { colors } from '@/theme/colors';
-import { font, radius, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing } from '@/theme/tokens';
 import type { Habit, HabitDifficulty, HabitType } from '@/types';
 import { DIFFICULTY_DEFAULTS } from '@/lib/economy';
 import { CATEGORIES, COLORS } from '@/lib/categories';
@@ -203,41 +203,56 @@ export function HabitForm({
 
 const styles = StyleSheet.create({
   section: {
-    color: colors.textDim,
-    fontSize: 10,
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 1,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.body as any,
   },
   catRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    gap: spacing.xs + 2,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radius.pill,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   catEmoji: { fontSize: 14 },
-  catLabel: { color: colors.textMuted, fontSize: font.size.sm },
-  colorRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  catLabel: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    fontFamily: fontFamily.body as any,
+  },
+  colorRow: { flexDirection: 'row', gap: spacing.sm + 2, flexWrap: 'wrap' },
   colorDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 3,
   },
   brutalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.surfaceAlt,
-    padding: spacing.md,
-    borderRadius: radius.md,
+    padding: spacing.md + 2,
+    borderRadius: radius.lg,
     marginTop: spacing.md,
   },
-  brutalTitle: { color: colors.text, fontSize: font.size.md, fontWeight: '700' },
-  brutalDesc: { color: colors.textMuted, fontSize: font.size.xs, marginTop: 2 },
+  brutalTitle: {
+    color: colors.text,
+    fontSize: font.size.md,
+    fontWeight: '700',
+    fontFamily: fontFamily.body as any,
+  },
+  brutalDesc: {
+    color: colors.textMuted,
+    fontSize: font.size.xs,
+    marginTop: 2,
+    fontFamily: fontFamily.body as any,
+  },
 });

@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/Screen';
-import { Card } from '@/components/Card';
 import { CoinBadge } from '@/components/CoinBadge';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { RewardCard } from '@/components/RewardCard';
+import { Button } from '@/components/Button';
 import { useRewards } from '@/store/useRewards';
 import { useProfile } from '@/store/useProfile';
 import { colors } from '@/theme/colors';
-import { font, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing, softShadowSm } from '@/theme/tokens';
 import * as haptic from '@/lib/haptics';
 
 function confirm(title: string, message: string): Promise<boolean> {
@@ -37,7 +37,7 @@ export default function Rewards() {
   const handleRedeem = async (id: string, title: string, cost: number) => {
     const ok = await confirm(
       `Resgatar "${title}"?`,
-      `Vai debitar ${cost} coin do seu saldo. Você tem permissão pra gastar dinheiro real correspondente.`,
+      `Vai debitar ${cost} coin do saldo. Você tem permissão pra gastar a grana real correspondente.`,
     );
     if (!ok) return;
     setBusyId(id);
@@ -58,22 +58,22 @@ export default function Rewards() {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.h1}>Loja</Text>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.h1}>Loja ♡</Text>
           <Text style={styles.sub}>Gaste coin no que importa.</Text>
         </View>
-        <Card style={styles.balance}>
+        <View style={[styles.balanceBubble, softShadowSm]}>
           <Text style={styles.balanceLabel}>SALDO</Text>
           <CoinBadge amount={balance} size="md" />
-        </Card>
+        </View>
       </View>
 
       {rewards.length === 0 ? (
         <EmptyState
           emoji="🎁"
           title="Sem recompensas"
-          body="Cadastre o que você quer comprar com coin. Pequenos prazeres, médios, grandes."
+          body="Cadastra o que você quer comprar com coin. Pequenos prazeres, médios, grandes."
           actionLabel="Criar recompensa"
           onAction={() => router.push('/reward/new' as any)}
         />
@@ -83,6 +83,7 @@ export default function Rewards() {
             <>
               <SectionHeader
                 title="Consumíveis"
+                emoji="✿"
                 actionLabel="+ novo"
                 onAction={() => router.push('/reward/new' as any)}
               />
@@ -98,7 +99,7 @@ export default function Rewards() {
           )}
           {groups.oneoff.length > 0 && (
             <>
-              <SectionHeader title="Únicos" />
+              <SectionHeader title="Únicos" emoji="✦" />
               {groups.oneoff.map((r) => (
                 <RewardCard
                   key={r.id}
@@ -111,7 +112,7 @@ export default function Rewards() {
           )}
           {groups.big.length > 0 && (
             <>
-              <SectionHeader title="Grandes" />
+              <SectionHeader title="Grandes" emoji="♡" />
               {groups.big.map((r) => (
                 <RewardCard
                   key={r.id}
@@ -122,10 +123,11 @@ export default function Rewards() {
               ))}
             </>
           )}
-          <SectionHeader
-            title=""
-            actionLabel="+ nova recompensa"
-            onAction={() => router.push('/reward/new' as any)}
+          <Button
+            label="+ nova recompensa"
+            variant="ghost"
+            onPress={() => router.push('/reward/new' as any)}
+            style={{ marginTop: spacing.lg }}
           />
         </>
       )}
@@ -134,15 +136,35 @@ export default function Rewards() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  h1: { color: colors.text, fontSize: font.size.title, fontWeight: '900', letterSpacing: -1 },
-  sub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: spacing.xs },
-  balance: { padding: spacing.md, alignItems: 'flex-end' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
+  h1: {
+    color: colors.text,
+    fontSize: font.size.title,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -1,
+  },
+  sub: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    marginTop: spacing.xs,
+    fontFamily: fontFamily.body as any,
+  },
+  balanceBubble: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    alignItems: 'flex-end',
+  },
   balanceLabel: {
     color: colors.textDim,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 1,
     marginBottom: 4,
+    fontFamily: fontFamily.body as any,
   },
 });

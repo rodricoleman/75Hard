@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { useHabits } from '@/store/useHabits';
 import { useAntiHabits } from '@/store/useAntiHabits';
 import { colors } from '@/theme/colors';
-import { font, radius, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing, softShadowSm } from '@/theme/tokens';
 
 export default function Habits() {
   const router = useRouter();
@@ -20,10 +20,11 @@ export default function Habits() {
   return (
     <Screen>
       <Text style={styles.h1}>Hábitos</Text>
-      <Text style={styles.sub}>Toque longo num item da Hoje pra editar.</Text>
+      <Text style={styles.sub}>Toque ✎ pra editar.</Text>
 
       <SectionHeader
         title="Hábitos positivos"
+        emoji="✿"
         actionLabel="+ novo"
         onAction={() => router.push('/habit/new' as any)}
       />
@@ -31,7 +32,7 @@ export default function Habits() {
         <EmptyState
           emoji="✅"
           title="Sem hábitos"
-          body="Adicione hábitos que você quer cumprir — diários, semanais ou pontuais."
+          body="Adiciona hábitos diários, semanais ou pontuais que você quer cumprir."
           actionLabel="Criar hábito"
           onAction={() => router.push('/habit/new' as any)}
         />
@@ -40,15 +41,25 @@ export default function Habits() {
           <Pressable
             key={h.id}
             onPress={() => router.push(`/habit/${h.id}` as any)}
-            style={({ pressed }) => [styles.row, { opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+              styles.row,
+              softShadowSm,
+              { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] },
+            ]}
           >
+            <View
+              style={[
+                styles.colorDot,
+                { backgroundColor: h.color ?? colors.primary },
+              ]}
+            />
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>
                 {h.emoji ? `${h.emoji}  ` : ''}
                 {h.title}
               </Text>
               <Text style={styles.meta}>
-                {h.type === 'daily' ? 'Diário' : h.type === 'weekly' ? `Semanal · ${h.weekly_target ?? '?'}x` : 'Pontual'}
+                {h.type === 'daily' ? 'diário' : h.type === 'weekly' ? `semanal · ${h.weekly_target ?? '?'}×` : 'pontual'}
                 {' · '}
                 {h.difficulty}
                 {' · '}
@@ -62,13 +73,14 @@ export default function Habits() {
 
       <SectionHeader
         title="Anti-hábitos"
+        emoji="⚠"
         actionLabel="+ novo"
         onAction={() => router.push('/anti/new' as any)}
       />
       {antiHabits.length === 0 ? (
         <Card>
           <Text style={styles.emptyText}>
-            Nenhum anti-hábito. Adicione comportamentos que você quer evitar (perde coin quando registrar).
+            Sem anti-hábitos. Adiciona o que você quer evitar (perde coin quando registrar).
           </Text>
         </Card>
       ) : (
@@ -76,14 +88,19 @@ export default function Habits() {
           <Pressable
             key={a.id}
             onPress={() => router.push(`/anti/${a.id}` as any)}
-            style={({ pressed }) => [styles.row, { opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [
+              styles.row,
+              softShadowSm,
+              { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] },
+            ]}
           >
+            <View style={[styles.colorDot, { backgroundColor: colors.danger }]} />
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>
                 {a.emoji ? `${a.emoji}  ` : ''}
                 {a.title}
               </Text>
-              <Text style={styles.meta}>Penalidade por slip</Text>
+              <Text style={styles.meta}>penalidade por slip</Text>
             </View>
             <CoinBadge amount={-a.coin_penalty} size="sm" sign />
           </Pressable>
@@ -94,20 +111,46 @@ export default function Habits() {
 }
 
 const styles = StyleSheet.create({
-  h1: { color: colors.text, fontSize: font.size.title, fontWeight: '900', letterSpacing: -1 },
-  sub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: spacing.xs },
+  h1: {
+    color: colors.text,
+    fontSize: font.size.title,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -1,
+  },
+  sub: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    marginTop: spacing.xs,
+    fontFamily: fontFamily.body as any,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
     borderWidth: 1,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    borderRadius: radius.lg,
+    padding: spacing.md + 2,
+    marginBottom: spacing.sm + 2,
     gap: spacing.md,
   },
-  title: { color: colors.text, fontSize: font.size.md, fontWeight: font.weight.semibold },
-  meta: { color: colors.textMuted, fontSize: font.size.xs, marginTop: 2 },
-  emptyText: { color: colors.textMuted, fontSize: font.size.sm },
+  colorDot: { width: 12, height: 12, borderRadius: 6 },
+  title: {
+    color: colors.text,
+    fontSize: font.size.md,
+    fontWeight: '600',
+    fontFamily: fontFamily.body as any,
+  },
+  meta: {
+    color: colors.textMuted,
+    fontSize: font.size.xs,
+    marginTop: 2,
+    fontFamily: fontFamily.body as any,
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    fontFamily: fontFamily.body as any,
+  },
 });

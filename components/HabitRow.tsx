@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors } from '@/theme/colors';
-import { font, radius, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing, softShadowSm } from '@/theme/tokens';
 import { CoinBadge } from './CoinBadge';
 import type { Habit } from '@/types';
 import { streakMultiplier } from '@/lib/economy';
@@ -22,6 +22,7 @@ export function HabitRow({
   const router = useRouter();
   const mult = streakMultiplier(done ? streak : streak + 1);
   const earn = Math.round(habit.coin_reward * mult);
+  const accent = habit.color ?? colors.primary;
 
   return (
     <Pressable
@@ -33,38 +34,51 @@ export function HabitRow({
       style={({ pressed }) => [
         styles.row,
         {
-          backgroundColor: done ? colors.surfaceAlt : colors.surface,
-          opacity: pressed ? 0.85 : 1,
-          borderColor: done ? colors.success : colors.border,
-          borderLeftColor: habit.color ?? (done ? colors.success : colors.border),
-          borderLeftWidth: 3,
+          backgroundColor: done ? `${accent}1A` : colors.surface,
+          opacity: pressed ? 0.92 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
+          borderColor: done ? accent : colors.borderSoft,
         },
+        !done && softShadowSm,
       ]}
     >
       <View
         style={[
           styles.check,
           {
-            backgroundColor: done ? colors.success : 'transparent',
-            borderColor: done ? colors.success : colors.border,
+            backgroundColor: done ? accent : 'transparent',
+            borderColor: done ? accent : colors.border,
           },
         ]}
       >
         {done ? <Text style={styles.checkMark}>✓</Text> : null}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.title, done && { textDecorationLine: 'line-through', color: colors.textMuted }]}>
+        <Text
+          style={[
+            styles.title,
+            done && { color: colors.textMuted },
+          ]}
+        >
           {habit.emoji ? `${habit.emoji}  ` : ''}
           {habit.title}
         </Text>
         <View style={styles.meta}>
           {streak > 0 && (
-            <Text style={styles.streak}>🔥 {streak}d</Text>
+            <View style={styles.streakPill}>
+              <Text style={styles.streakTxt}>🔥 {streak}</Text>
+            </View>
           )}
           {mult > 1 && !done && (
-            <Text style={styles.mult}>x{mult}</Text>
+            <View style={[styles.multPill, { backgroundColor: colors.accentSoft }]}>
+              <Text style={styles.multTxt}>×{mult}</Text>
+            </View>
           )}
-          {habit.brutal && <Text style={styles.brutal}>BRUTAL</Text>}
+          {habit.brutal && (
+            <View style={[styles.multPill, { backgroundColor: colors.dangerSoft }]}>
+              <Text style={[styles.multTxt, { color: '#A24452' }]}>brutal</Text>
+            </View>
+          )}
         </View>
       </View>
       <CoinBadge amount={earn} size="sm" />
@@ -83,27 +97,52 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     gap: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.sm + 2,
   },
   check: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkMark: { color: '#0B0D10', fontWeight: '900', fontSize: 16 },
-  title: { color: colors.text, fontSize: font.size.md, fontWeight: font.weight.semibold },
-  meta: { flexDirection: 'row', gap: spacing.sm, marginTop: 2 },
-  streak: { color: colors.warn, fontSize: font.size.xs, fontWeight: '600' },
-  mult: { color: colors.accent, fontSize: font.size.xs, fontWeight: '700' },
+  checkMark: { color: '#FFF', fontWeight: '900', fontSize: 16 },
+  title: {
+    color: colors.text,
+    fontSize: font.size.md,
+    fontWeight: '600',
+    fontFamily: fontFamily.body as any,
+  },
+  meta: { flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' },
+  streakPill: {
+    backgroundColor: colors.warnSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  streakTxt: {
+    color: '#9A6300',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: fontFamily.body as any,
+  },
+  multPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  multTxt: {
+    color: '#2E4A40',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: fontFamily.body as any,
+  },
   edit: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs },
-  editTxt: { color: colors.textDim, fontSize: 18 },
-  brutal: { color: colors.danger, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  editTxt: { color: colors.textDim, fontSize: 16 },
 });

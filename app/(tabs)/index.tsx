@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useProfile } from '@/store/useProfile';
@@ -13,14 +13,18 @@ import { AntiHabitRow } from '@/components/AntiHabitRow';
 import { MissionCard } from '@/components/MissionCard';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
-import { Card } from '@/components/Card';
 import { colors } from '@/theme/colors';
-import { font, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing, softShadowSm } from '@/theme/tokens';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+const MAX_W = 520;
+
 export default function Today() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const horizontalPad = width > MAX_W ? Math.max(spacing.lg, (width - MAX_W) / 2) : spacing.lg;
+
   const profile = useProfile((s) => s.profile);
   const habits = useHabits((s) => s.habits);
   const doneTodayMap = useHabits((s) => s.doneTodayMap);
@@ -57,39 +61,57 @@ export default function Today() {
   const onceHabits = habits.filter((h) => h.type === 'once');
   const doneCount = dailyHabits.filter((h) => doneMap[h.id]).length;
   const totalDaily = dailyHabits.length;
+  const allDone = totalDaily > 0 && doneCount === totalDaily;
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 6) return 'Boa madrugada';
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  })();
+  const firstName = profile?.display_name?.split(' ')[0] ?? '';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: horizontalPad }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.greet}>{today}</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greet}>
+              {greeting}{firstName ? `, ${firstName}` : ''} ✿
+            </Text>
+            <Text style={styles.date}>{today}</Text>
+          </View>
+        </View>
+
         <Text style={styles.title}>
           {totalDaily > 0
-            ? `${doneCount}/${totalDaily} hoje`
-            : 'Nenhum hábito ainda'}
+            ? allDone
+              ? 'Tudo feito hoje! ✦'
+              : `${doneCount} de ${totalDaily} hoje`
+            : 'Hora de começar ✿'}
         </Text>
 
-        <Card style={styles.walletCard}>
-          <View style={styles.walletHeader}>
-            <View>
-              <Text style={styles.walletLabel}>SALDO</Text>
-              <CoinBadge amount={profile?.coin_balance ?? 0} size="lg" />
-            </View>
-          </View>
+        {/* Wallet hero */}
+        <View style={[styles.walletCard, softShadowSm]}>
+          <View style={styles.walletDecor1} />
+          <View style={styles.walletDecor2} />
+          <Text style={styles.walletLabel}>SALDO ✦</Text>
+          <CoinBadge amount={profile?.coin_balance ?? 0} size="lg" />
           <View style={{ marginTop: spacing.lg }}>
             <XPBar xp={profile?.xp ?? 0} level={profile?.level ?? 1} />
           </View>
-        </Card>
+        </View>
 
         {mission && (
-          <View style={{ marginBottom: spacing.lg }}>
+          <View style={{ marginTop: spacing.md }}>
             <MissionCard
               mission={mission}
               progress={missionProgress}
@@ -105,7 +127,7 @@ export default function Today() {
           <EmptyState
             emoji="🌱"
             title="Comece pelos hábitos"
-            body="Crie seu primeiro hábito e ganhe coin cada vez que cumprir."
+            body="Cria seu primeiro hábito e ganha coin a cada check-in."
             actionLabel="Criar hábito"
             onAction={() => router.push('/habit/new' as any)}
           />
@@ -113,7 +135,7 @@ export default function Today() {
           <>
             {dailyHabits.length > 0 && (
               <>
-                <SectionHeader title="Diários" />
+                <SectionHeader title="Diários" emoji="☀" />
                 {dailyHabits.map((h) => (
                   <HabitRow
                     key={h.id}
@@ -128,7 +150,7 @@ export default function Today() {
 
             {weeklyHabits.length > 0 && (
               <>
-                <SectionHeader title="Semanais" />
+                <SectionHeader title="Semanais" emoji="✦" />
                 {weeklyHabits.map((h) => (
                   <HabitRow
                     key={h.id}
@@ -143,7 +165,7 @@ export default function Today() {
 
             {onceHabits.length > 0 && (
               <>
-                <SectionHeader title="Pontuais" />
+                <SectionHeader title="Pontuais" emoji="✿" />
                 {onceHabits.map((h) => (
                   <HabitRow
                     key={h.id}
@@ -160,9 +182,9 @@ export default function Today() {
 
         {antiHabits.length > 0 && (
           <>
-            <SectionHeader title="Anti-hábitos" />
+            <SectionHeader title="Anti-hábitos" emoji="⚠" />
             <Text style={styles.antiHint}>
-              Toque pra registrar uma slip — você perde coin.
+              Toque slip se cair — perde coin. ↺ desfaz.
             </Text>
             {antiHabits.map((a) => {
               const last = lastLogFor(a.id);
@@ -185,24 +207,70 @@ export default function Today() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
-  greet: { color: colors.textMuted, fontSize: font.size.sm, textTransform: 'capitalize' },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.xxl * 2 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  greet: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    fontFamily: fontFamily.body as any,
+    letterSpacing: 0.2,
+  },
+  date: {
+    color: colors.textDim,
+    fontSize: font.size.xs,
+    textTransform: 'capitalize',
+    marginTop: 2,
+    fontFamily: fontFamily.body as any,
+  },
   title: {
     color: colors.text,
     fontSize: font.size.title,
-    fontWeight: '900',
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
     letterSpacing: -1,
-    marginTop: spacing.xs,
+    marginTop: spacing.xs + 2,
     marginBottom: spacing.lg,
   },
-  walletCard: { marginBottom: spacing.lg },
-  walletHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  walletLabel: {
-    color: colors.textDim,
-    fontSize: 10,
-    letterSpacing: 1.4,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
+  walletCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    overflow: 'hidden',
   },
-  antiHint: { color: colors.textDim, fontSize: font.size.xs, marginBottom: spacing.sm },
+  walletDecor1: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.coinSoft,
+    opacity: 0.5,
+  },
+  walletDecor2: {
+    position: 'absolute',
+    bottom: -40,
+    left: -40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.xpSoft,
+    opacity: 0.4,
+  },
+  walletLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    letterSpacing: 1,
+    fontWeight: '700',
+    fontFamily: fontFamily.body as any,
+    marginBottom: spacing.sm,
+  },
+  antiHint: {
+    color: colors.textDim,
+    fontSize: font.size.xs,
+    marginBottom: spacing.sm,
+    fontFamily: fontFamily.body as any,
+  },
 });

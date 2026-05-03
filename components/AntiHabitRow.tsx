@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors } from '@/theme/colors';
-import { font, radius, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing, softShadowSm } from '@/theme/tokens';
 import { CoinBadge } from './CoinBadge';
 import type { AntiHabit, AntiHabitLog } from '@/types';
 import { useRouter } from 'expo-router';
@@ -22,14 +22,14 @@ export function AntiHabitRow({
 }) {
   const router = useRouter();
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, softShadowSm]}>
       <View style={styles.icon}>
         <Text style={styles.iconText}>{antiHabit.emoji ?? '⚠'}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{antiHabit.title}</Text>
         <Text style={styles.meta}>
-          {todayCount > 0 ? `Hoje: ${todayCount}x` : 'Toque "slip" se cair (perde coin)'}
+          {todayCount > 0 ? `Hoje: ${todayCount}×` : 'Toque "slip" se cair'}
         </Text>
       </View>
       <CoinBadge amount={-antiHabit.coin_penalty} size="sm" sign />
@@ -40,9 +40,9 @@ export function AntiHabitRow({
             onUndo();
           }}
           hitSlop={6}
-          style={[styles.btn, { borderColor: colors.success }]}
+          style={[styles.btn, { backgroundColor: colors.successSoft }]}
         >
-          <Text style={[styles.btnTxt, { color: colors.success }]}>↺</Text>
+          <Text style={[styles.btnTxt, { color: '#3D7C4A' }]}>↺</Text>
         </Pressable>
       ) : (
         <Pressable
@@ -51,9 +51,9 @@ export function AntiHabitRow({
             onLog();
           }}
           hitSlop={6}
-          style={[styles.btn, { borderColor: colors.danger }]}
+          style={[styles.btn, { backgroundColor: colors.dangerSoft }]}
         >
-          <Text style={[styles.btnTxt, { color: colors.danger }]}>slip</Text>
+          <Text style={[styles.btnTxt, { color: '#A24452' }]}>slip</Text>
         </Pressable>
       )}
       <Pressable
@@ -72,32 +72,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.borderSoft,
     backgroundColor: colors.surface,
     gap: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.sm + 2,
   },
   icon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconText: { fontSize: 18 },
-  title: { color: colors.text, fontSize: font.size.md, fontWeight: font.weight.semibold },
-  meta: { color: colors.textMuted, fontSize: font.size.xs, marginTop: 2 },
-  btn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    borderWidth: 1,
+  title: {
+    color: colors.text,
+    fontSize: font.size.md,
+    fontWeight: '600',
+    fontFamily: fontFamily.body as any,
   },
-  btnTxt: { fontWeight: '700', fontSize: font.size.xs },
+  meta: {
+    color: colors.textMuted,
+    fontSize: font.size.xs,
+    marginTop: 2,
+    fontFamily: fontFamily.body as any,
+  },
+  btn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  btnTxt: {
+    fontWeight: '700',
+    fontSize: font.size.xs,
+    fontFamily: fontFamily.body as any,
+  },
   edit: { paddingHorizontal: spacing.xs, paddingVertical: spacing.xs },
-  editTxt: { color: colors.textDim, fontSize: 18 },
+  editTxt: { color: colors.textDim, fontSize: 16 },
 });

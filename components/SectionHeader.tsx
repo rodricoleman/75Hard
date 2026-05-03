@@ -1,22 +1,27 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors } from '@/theme/colors';
-import { font, spacing } from '@/theme/tokens';
+import { font, fontFamily, radius, spacing } from '@/theme/tokens';
 
 export function SectionHeader({
   title,
   actionLabel,
   onAction,
+  emoji,
 }: {
   title: string;
   actionLabel?: string;
   onAction?: () => void;
+  emoji?: string;
 }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.titleWrap}>
+        {emoji && <Text style={styles.emoji}>{emoji}</Text>}
+        <Text style={styles.title}>{title}</Text>
+      </View>
       {actionLabel && onAction && (
-        <Pressable onPress={onAction} hitSlop={8}>
+        <Pressable onPress={onAction} hitSlop={8} style={styles.actionWrap}>
           <Text style={styles.action}>{actionLabel}</Text>
         </Pressable>
       )}
@@ -29,13 +34,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
   },
+  titleWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  emoji: { fontSize: 18 },
   title: {
     color: colors.text,
     fontSize: font.size.lg,
-    fontWeight: font.weight.bold,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -0.2,
   },
-  action: { color: colors.primary, fontSize: font.size.sm, fontWeight: font.weight.semibold },
+  actionWrap: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  action: {
+    color: colors.primaryDark,
+    fontSize: font.size.xs,
+    fontWeight: '700',
+    fontFamily: fontFamily.body as any,
+    letterSpacing: 0.3,
+  },
 });

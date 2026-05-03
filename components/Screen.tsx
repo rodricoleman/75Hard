@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { View, ScrollView, StyleSheet, ViewStyle, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/tokens';
+
+const MAX_CONTENT_W = 520;
 
 export function Screen({
   children,
@@ -13,17 +15,24 @@ export function Screen({
   scroll?: boolean;
   style?: ViewStyle;
 }) {
+  const { width } = useWindowDimensions();
+  const horizontalPad =
+    width > MAX_CONTENT_W ? Math.max(spacing.lg, (width - MAX_CONTENT_W) / 2) : spacing.lg;
+
   if (!scroll) {
     return (
       <SafeAreaView style={[styles.safe, style]} edges={['top']}>
-        <View style={styles.inner}>{children}</View>
+        <View style={[styles.inner, { paddingHorizontal: horizontalPad }]}>{children}</View>
       </SafeAreaView>
     );
   }
   return (
     <SafeAreaView style={[styles.safe, style]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scrollInner}
+        contentContainerStyle={[
+          styles.scrollInner,
+          { paddingHorizontal: horizontalPad },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -35,9 +44,8 @@ export function Screen({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  inner: { flex: 1, paddingHorizontal: spacing.lg },
+  inner: { flex: 1 },
   scrollInner: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl * 2,
   },

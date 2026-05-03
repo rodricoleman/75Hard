@@ -1,22 +1,32 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/tokens';
+import { radius, spacing, softShadowSm } from '@/theme/tokens';
 
 export function Card({
   children,
   style,
   variant = 'default',
+  padded = true,
 }: {
   children: React.ReactNode;
   style?: ViewStyle;
-  variant?: 'default' | 'alt';
+  variant?: 'default' | 'alt' | 'soft' | 'flat';
+  padded?: boolean;
 }) {
+  const bg =
+    variant === 'alt'
+      ? colors.surfaceAlt
+      : variant === 'soft'
+      ? colors.surfaceMuted
+      : colors.surface;
   return (
     <View
       style={[
         styles.card,
-        { backgroundColor: variant === 'alt' ? colors.surfaceAlt : colors.surface },
+        { backgroundColor: bg },
+        variant !== 'flat' && softShadowSm,
+        padded && styles.padded,
         style,
       ]}
     >
@@ -28,8 +38,10 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     borderRadius: radius.lg,
-    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSoft,
+  },
+  padded: {
+    padding: spacing.lg,
   },
 });

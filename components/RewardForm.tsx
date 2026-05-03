@@ -4,7 +4,7 @@ import { Input } from './Input';
 import { Button } from './Button';
 import { SegmentedControl } from './SegmentedControl';
 import { colors } from '@/theme/colors';
-import { font, spacing } from '@/theme/tokens';
+import { font, fontFamily, spacing } from '@/theme/tokens';
 import type { Reward, RewardType } from '@/types';
 
 export type RewardFormValues = {
@@ -102,11 +102,12 @@ export function RewardForm({
 
 const styles = StyleSheet.create({
   section: {
-    color: colors.textDim,
-    fontSize: 10,
+    color: colors.textMuted,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.4,
+    letterSpacing: 1,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.body as any,
   },
 });

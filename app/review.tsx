@@ -8,7 +8,7 @@ import { useAntiHabits } from '@/store/useAntiHabits';
 import { useRewards } from '@/store/useRewards';
 import { useProfile } from '@/store/useProfile';
 import { colors } from '@/theme/colors';
-import { font, spacing } from '@/theme/tokens';
+import { font, fontFamily, spacing } from '@/theme/tokens';
 import { currentWeekDates, prettyDate } from '@/lib/dates';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -139,21 +139,45 @@ const lineStyles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSoft,
   },
-  k: { color: colors.textMuted, fontSize: font.size.sm },
-  v: { color: colors.text, fontSize: font.size.sm, fontWeight: '700' },
+  k: { color: colors.textMuted, fontSize: font.size.sm, fontFamily: fontFamily.body as any },
+  v: { color: colors.text, fontSize: font.size.sm, fontWeight: '700', fontFamily: fontFamily.body as any },
 });
 
 const styles = StyleSheet.create({
-  subtitle: { color: colors.textMuted, fontSize: font.size.sm, marginTop: spacing.md },
-  h1: { color: colors.text, fontSize: font.size.title, fontWeight: '900', letterSpacing: -1 },
-  label: { color: colors.textDim, fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: spacing.sm },
+  subtitle: { color: colors.textMuted, fontSize: font.size.sm, marginTop: spacing.md, fontFamily: fontFamily.body as any },
+  h1: {
+    color: colors.text,
+    fontSize: font.size.title,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -1,
+  },
+  label: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+    fontFamily: fontFamily.body as any,
+  },
   breakdown: { marginTop: spacing.md },
-  brkLine: { color: colors.textMuted, fontSize: font.size.sm },
-  brkPos: { color: colors.coin, fontWeight: '700' },
-  brkNeg: { color: colors.danger, fontWeight: '700' },
-  brkNeu: { color: colors.accent, fontWeight: '700' },
-  bigLine: { color: colors.text, fontSize: font.size.lg, fontWeight: '700' },
-  bigSub: { color: colors.textMuted, fontSize: font.size.sm, marginTop: 4 },
+  brkLine: { color: colors.textMuted, fontSize: font.size.sm, fontFamily: fontFamily.body as any },
+  brkPos: { color: '#A87B14', fontWeight: '700' },
+  brkNeg: { color: '#A24452', fontWeight: '700' },
+  brkNeu: { color: '#2E6F58', fontWeight: '700' },
+  bigLine: {
+    color: colors.text,
+    fontSize: font.size.lg,
+    fontWeight: '700',
+    fontFamily: fontFamily.display as any,
+    letterSpacing: -0.2,
+  },
+  bigSub: {
+    color: colors.textMuted,
+    fontSize: font.size.sm,
+    marginTop: 4,
+    fontFamily: fontFamily.body as any,
+  },
 });
